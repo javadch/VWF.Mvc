@@ -17,6 +17,18 @@ namespace Vaiona.Util.Cfg
             } 
         }
 
+        public static string DefaultCulture
+        {
+            get
+            {
+                try
+                {
+                    return (ConfigurationManager.AppSettings["DefaultCulture"]);
+                }
+                catch { return ("fa-IR"); }
+            }
+        }
+
         public static string IoCProviderTypeInfo
         {
             get

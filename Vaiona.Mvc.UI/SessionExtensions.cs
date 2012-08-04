@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web.SessionState;
 using System.Globalization;
+using System.Threading;
 
 namespace Vaiona.Mvc.UI
 {
@@ -25,7 +26,14 @@ namespace Vaiona.Mvc.UI
             {
                 // perform calendar and etc settings
             }
-            // ...
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture; 
         }
+
+        public static CultureInfo GetCurrentCulture(this HttpSessionState session)
+        {
+            return (Thread.CurrentThread.CurrentCulture);
+        }
+    
     }
 }
