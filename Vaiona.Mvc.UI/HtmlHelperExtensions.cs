@@ -11,6 +11,7 @@ using System.Xml.Resolvers;
 using System.Xml.Xsl;
 using System.Xml.XPath;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Vaiona.Mvc.UI
 {
@@ -108,6 +109,62 @@ namespace Vaiona.Mvc.UI
 
             // Return result
             return MvcHtmlString.Create(xsltResult);
+        }
+
+        public static System.Globalization.CultureInfo GetCurrentCulture(this HtmlHelper helper)
+        {
+            return (GlobalizationHelper.GetCurrentCulture());
+        }
+
+        public static string GetCultureDirection(this HtmlHelper helper)
+        {
+            return (GlobalizationHelper.GetCurrentCulture().TextInfo.IsRightToLeft ? "right" : "left");
+        }
+
+        public static string GetCultureReverseDirection(this HtmlHelper helper)
+        {
+            return (GlobalizationHelper.GetCurrentCulture().TextInfo.IsRightToLeft ? "left" : "right");
+        }
+
+        public static string GetCultureDirectionShort(this HtmlHelper helper)
+        {
+            return (GlobalizationHelper.GetCurrentCulture().TextInfo.IsRightToLeft ? "rtl" : "ltr");
+        }
+
+        public static string GetCultureReverseDirectionShort(this HtmlHelper helper)
+        {
+            return (GlobalizationHelper.GetCurrentCulture().TextInfo.IsRightToLeft ? "ltr" : "rtl");
+        }
+
+        public static void SetCulture(this HtmlHelper helper)
+        {
+            helper.SetCulture(helper.GetCurrentCulture());
+        }
+
+        public static void SetCulture(this HtmlHelper helper, string cultureId)
+        {
+            helper.SetCulture(new CultureInfo(cultureId, true));
+        }
+
+        public static void SetCulture(this HtmlHelper helper, CultureInfo culture)
+        {
+            GlobalizationHelper.SetSessionCulture(culture); //??
+        }
+
+        public static void SetTheme(this HtmlHelper helper, string themeName)
+        {
+            //return (GlobalizationHelper.GetCurrentCulture());
+        }
+
+        public static string GetTheme(this HtmlHelper helper)
+        {
+            string themeName = "default";
+            //var theme = ccPeople.Model.PublicQueries.MessageQueries.GetMessage("Theme");
+            //if(theme != null)
+            //{
+            //    themeName = theme.Body;
+            //}
+            return (themeName);
         }
     }
 }

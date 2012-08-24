@@ -15,6 +15,6 @@ namespace Vaiona.Model.Common
         public virtual AuditActionType ActionType { get; set; }
         public virtual string Performer { get; set; }
         public virtual string Comment { get; set; }
-        public virtual DateTime Timestamp { get; set; }
+        public virtual DateTime? Timestamp { get; set; }
     }
 }

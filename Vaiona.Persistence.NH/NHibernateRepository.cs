@@ -20,9 +20,23 @@ namespace Vaiona.Persistence.NH
         {
         }
 
+        public bool IsTransient(object proxy)
+        {
+            bool result = NHibernate.Engine.ForeignKeys.IsTransient("", proxy, true, (this.UnitOfWork as NHibernateUnitOfWork).Session.GetSessionImplementation());
+            return (result);
+        }
+
+        public TEntity Merge(TEntity entity)
+        {
+            //session.Lock(entity, LockMode.None);
+            UoW.Session.Merge<TEntity>(entity);
+            return (entity);
+        }
         public bool Put(TEntity entity)
         {
             //session.Lock(entity, LockMode.None);
+            applyStateInfo(entity);
+            applyAuditInfo(entity);
             UoW.Session.SaveOrUpdate(entity);
             return (true);
         }
@@ -32,6 +46,8 @@ namespace Vaiona.Persistence.NH
             foreach (var entity in entities)
             {
                 //session.Lock(entity, LockMode.None);
+                applyStateInfo(entity);
+                applyAuditInfo(entity);
                 UoW.Session.SaveOrUpdate(entity);
             }
             return (true);
@@ -50,6 +66,19 @@ namespace Vaiona.Persistence.NH
                 UoW.Session.Delete(entity);
             }
             return (true);
+        }
+
+        private void applyAuditInfo(TEntity entity)
+        {
+            // check unsaved-value-check to know whether object is new or updated. use this info for state management
+            // check whether entity is a BaseEntity, BusinessEntity or something else
+            // throw new NotImplementedException();
+        }
+
+        private void applyStateInfo(TEntity entity)
+        {
+            // check unsaved-value-check to know whether object is new or updated. use this info for state management
+            // throw new NotImplementedException();
         }
     }
 }

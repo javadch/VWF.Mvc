@@ -50,10 +50,15 @@
     <Compile Include="NHibernatePersistenceManager.cs" />
     <Compile Include="NHibernateReadonlyRepository.cs" />
     <Compile Include="NHibernateRepository.cs" />
+    <Compile Include="NHibernateSessionProvider.cs" />
     <Compile Include="NHibernateUnitOfWork.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Vaiona.Model.Common\Vaiona.Model.Common.csproj">
+      <Project>{A60AC05F-8C9A-4EFD-9826-452E6049DA4D}</Project>
+      <Name>Vaiona.Model.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Vaiona.Util\Vaiona.Util.csproj">
       <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
       <Name>Vaiona.Util</Name>

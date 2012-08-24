@@ -36,6 +36,9 @@ namespace Vaiona.Persistence.Api
 
     public interface IRepository<TEntity> : IReadOnlyRepository<TEntity> where TEntity : class // BaseEntity
     {
+        bool IsTransient(object proxy);
+
+        TEntity Merge(TEntity entity);
         bool Put(TEntity entity);
         bool Put(IEnumerable<TEntity> entities);        
         bool Delete(TEntity entity);

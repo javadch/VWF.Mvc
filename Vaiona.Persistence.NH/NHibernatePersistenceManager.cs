@@ -7,6 +7,9 @@ using System.IO;
 using System;
 using System.Text.RegularExpressions;
 using Vaiona.Persistence.Api;
+using NHibernate.Context;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Vaiona.Persistence.NH
 {
@@ -94,11 +97,13 @@ namespace Vaiona.Persistence.NH
             if (sessionFactory != null)
                 return;
             sessionFactory = cfg.BuildSessionFactory();
+
             Contract.Ensures(sessionFactory != null);
         }
 
         public void Shutdown()
         {
+            EndContext();
             // may need locking for concurrent calls!
             if (sessionFactory != null)
             {
@@ -106,16 +111,116 @@ namespace Vaiona.Persistence.NH
             }
         }
 
+
         public IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
-            ISession session = sessionFactory.OpenSession();
+            ISession session = getSession();
             NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
             u.BeforeCommit += beforeCommit;
             u.AfterCommit += afterCommit;
             u.BeforeIgnore += beforeIgnore;
             u.AfterIgnore += afterIgnore;
             return (u);
-        }      
+        }
+
+        private ISession getSession()
+        {
+            ISession session = null;
+            try
+            {
+                session = sessionFactory.GetCurrentSession();
+            }
+            catch
+            { }
+            
+            if (session == null)
+            {   //strat a new session
+                StartConversation();
+            }
+            return (session);
+        }
+
+        public void StartConversation()
+        {
+            foreach (var sessionFactory in getSessionFactories())
+            {
+                var localFactory = sessionFactory;
+
+                NHibernateSessionProvider.Bind(new Lazy<ISession>(() => beginSession(localFactory)), sessionFactory);
+            }
+        }
+
+        public void EndConversation()
+        {
+            foreach (var sessionfactory in getSessionFactories())
+            {
+                var session = NHibernateSessionProvider.UnBind(sessionfactory);
+                if (session == null) continue;
+                endSession(session);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all ISessionFactory instances via IoC
+        /// </summary>
+        private IEnumerable<ISessionFactory> getSessionFactories()
+        {
+            var sessionFactories = new List<ISessionFactory>() { sessionFactory };
+
+            if (sessionFactories == null || !sessionFactories.Any())
+                throw new TypeLoadException("There should be at least one ISessionFactory registered");
+            return sessionFactories;
+        }
+
+        private static ISession beginSession(ISessionFactory sessionFactory)
+        {
+            var session = sessionFactory.OpenSession();
+            session.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
+            return session;
+        }
+
+        private static void endSession(ISession session, bool commitTransaction = false)
+        {
+            try
+            {
+                if (session.Transaction != null && session.Transaction.IsActive)
+                {
+                    if (commitTransaction)
+                    {
+                        try
+                        {
+                            session.Transaction.Commit();
+                        }
+                        catch
+                        {
+                            session.Transaction.Rollback();
+                            throw;
+                        }
+                    }
+                    else
+                    {
+                        session.Transaction.Rollback();
+                    }
+                }
+            }
+            finally
+            {
+                if (session.IsOpen)
+                    session.Close();
+
+                session.Dispose();
+            }
+        }
+
+        public void EndContext()
+        {
+            foreach (var sessionfactory in getSessionFactories())
+            {
+                var session = NHibernateSessionProvider.UnBind(sessionfactory);
+                if (session == null) continue;
+                endSession(session, false);
+            }
+        }
     }
 }

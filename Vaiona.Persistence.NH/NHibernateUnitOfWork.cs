@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using NHibernate;
 using Vaiona.Persistence.Api;
+using NHibernate.Context;
+using System.Web;
 
 namespace Vaiona.Persistence.NH
 {
@@ -106,31 +108,43 @@ namespace Vaiona.Persistence.NH
             Dispose(false);
         }
 
-        protected void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            // If you need thread safety, use a lock around these  
+            // operations, as well as in your methods that use the resource. 
+            if (!isDisposed)
             {
-                if (autoCommit)
-                    this.Commit();
-                else
-                    this.Ignore();
-                if (Session.IsOpen)
-                    Session.Close();
-                Session = null;
-                // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
-                BeforeCommit = null;
-                AfterCommit = null;
-                BeforeIgnore = null;
-                AfterIgnore = null;
+                if (disposing)
+                {
+                    disposeResources();
+                    isDisposed = true;
+                }
             }
-            // Code to dispose the un-managed resources of the class
-            isDisposed = true;
         }
 
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private void disposeResources()
+        {
+            if (autoCommit)
+                this.Commit();
+            else
+                this.Ignore();
+            //CurrentSessionContext.Unbind(this.Session.SessionFactory);
+            //if (Session.IsOpen)
+            //    Session.Close();
+            //Session.Dispose();
+            //Session = null;
+            //HttpContext.Current.Session.Remove("CurrentNHSession");
+            // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
+            BeforeCommit = null;
+            AfterCommit = null;
+            BeforeIgnore = null;
+            AfterIgnore = null;
         }
 
         public event EventHandler BeforeCommit;

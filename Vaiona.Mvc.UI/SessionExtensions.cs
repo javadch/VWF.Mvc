@@ -5,6 +5,7 @@ using System.Text;
 using System.Web.SessionState;
 using System.Globalization;
 using System.Threading;
+using Vaiona.Core;
 
 namespace Vaiona.Mvc.UI
 {
@@ -22,17 +23,12 @@ namespace Vaiona.Mvc.UI
 
         public static void ApplyCulture(this HttpSessionState session, CultureInfo culture)
         {
-            if (culture.Name.Equals("fa-IR", StringComparison.InvariantCultureIgnoreCase))
-            {
-                // perform calendar and etc settings
-            }
-            Thread.CurrentThread.CurrentCulture = culture;
-            Thread.CurrentThread.CurrentUICulture = culture; 
+            GlobalizationHelper.SetSessionCulture(culture);
         }
 
         public static CultureInfo GetCurrentCulture(this HttpSessionState session)
         {
-            return (Thread.CurrentThread.CurrentCulture);
+            return (GlobalizationHelper.GetCurrentCulture());
         }
     
     }

@@ -42,12 +42,16 @@
   <ItemGroup>
     <Compile Include="AutomaticMaterializationInfoAttribute.cs" />
     <Compile Include="BusinessVersion.cs" />
+    <Compile Include="ComparableObject.cs" />
+    <Compile Include="DomainSignatureAttribute.cs" />
     <Compile Include="Entity.cs" />
     <Compile Include="EntityAuditInfo.cs" />
     <Compile Include="EntityStateInfo.cs" />
     <Compile Include="EntityVersionInfo.cs" />
+    <Compile Include="EntityWithTypedId.cs" />
     <Compile Include="IAuditableEntity.cs" />
     <Compile Include="IBusinessVersionedEntity.cs" />
+    <Compile Include="IEntityWithTypedId.cs" />
     <Compile Include="IStatefullEntity.cs" />
     <Compile Include="IVersionedEntity.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
