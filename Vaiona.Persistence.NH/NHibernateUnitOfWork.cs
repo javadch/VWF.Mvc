@@ -59,10 +59,10 @@ namespace Vaiona.Persistence.NH
             {
                 this.Session.Transaction.Begin();
             }
-            else
-            {
-                Session.Close();
-            }
+            //else
+            //{
+            //    Session.Close();
+            //}
         }
 
         //public void CommitAndContinue()

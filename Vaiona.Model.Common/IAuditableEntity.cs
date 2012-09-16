@@ -7,6 +7,7 @@ namespace Vaiona.Model.Common
 {
     public interface IAuditableEntity
     {
-        EntityAuditInfo AuditInfo { get; set; }
+        EntityAuditInfo CreationInfo { get; set; } 
+        EntityAuditInfo ModificationInfo { get; set; } 
     }
 }

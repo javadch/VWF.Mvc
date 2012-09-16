@@ -14,6 +14,7 @@ namespace Vaiona.Persistence.Api
         IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null);
 
+        object GetCurrentConversation();
         void StartConversation();
         void EndConversation();
         void EndContext();

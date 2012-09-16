@@ -5,7 +5,7 @@ using System.Linq;
 namespace Vaiona.Model.Common
 {
     [Serializable]
-    public abstract class BaseEntity : EntityWithTypedId<Int64>, ISystemVersionedEntity
+    public abstract class BaseEntity : EntityWithTypedId<Int64>, ISystemVersionedEntity //
     {
         #region Fields        
 
@@ -16,7 +16,7 @@ namespace Vaiona.Model.Common
         //public virtual Int64 Id { get; set; }
 
         public virtual Int32 VersionNo { get; set; }
-        public virtual DateTime? TimeStamp { get; set; }
+        //public virtual DateTime? TimeStamp { get; set; }
 
         //public virtual EntityVersionInfo VersionInfo { get; set; } // Map as a component // Version item does not work inside component!!!
         public virtual XmlNode Extra { get; set; }
@@ -31,9 +31,11 @@ namespace Vaiona.Model.Common
 
         //public override bool Equals(object obj)
         //{
-        //    if(base.Equals(obj))
+        //    if (base.Equals(obj))
         //        return (true);
-        //    if (this.Id == ((BaseEntity)obj).Id && this.Id != 0)
+        //    if ( ((BaseEntity)obj).Id == 0 || this.Id == 0)
+        //        return (false);
+        //    if (this.Id == ((BaseEntity)obj).Id)
         //        return (true);
         //    else
         //        return (false);
@@ -41,7 +43,7 @@ namespace Vaiona.Model.Common
 
         //public override int GetHashCode()
         //{
-        //    if(Id <= 0)
+        //    if (Id <= 0)
         //        return base.GetHashCode();
         //    return (Id.GetHashCode());
         //}
@@ -117,7 +119,8 @@ namespace Vaiona.Model.Common
         #region Attributes
 
         public virtual EntityStateInfo StateInfo { get; set; } // Map as a component
-        public virtual EntityAuditInfo AuditInfo { get; set; } // Map as a component
+        public virtual EntityAuditInfo CreationInfo { get; set; } // Map as a component
+        public virtual EntityAuditInfo ModificationInfo { get; set; } // Map as a component
         
         #endregion
 
@@ -130,7 +133,8 @@ namespace Vaiona.Model.Common
         public BusinessEntity()
         {
             StateInfo = new EntityStateInfo();
-            AuditInfo = new EntityAuditInfo();
+            CreationInfo = new EntityAuditInfo();
+            ModificationInfo = new EntityAuditInfo();
         }
         //public abstract void Validate();
         

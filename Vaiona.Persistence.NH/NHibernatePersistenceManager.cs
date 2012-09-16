@@ -141,6 +141,11 @@ namespace Vaiona.Persistence.NH
             return (session);
         }
 
+        public object GetCurrentConversation()
+        {
+            return(getSession());
+        }
+
         public void StartConversation()
         {
             foreach (var sessionFactory in getSessionFactories())

@@ -31,26 +31,29 @@ namespace Vaiona.Model.Common
         ///     See the FAQ within the documentation if you'd like to have the Id XML serialized.
         /// </summary>
         [XmlIgnore]
-        public virtual TId Id { get; protected set; }
+        [DomainSignature]
+        public virtual TId Id { get; set; }
 
         public override bool Equals(object obj)
         {
             var compareTo = obj as EntityWithTypedId<TId>;
 
-            if (ReferenceEquals(this, compareTo))
-            {
-                return true;
-            }
+            if (((ComparableObject)this).Equals(compareTo))
+                return (true);
+            //if (ReferenceEquals(this, compareTo))
+            //{
+            //    return true;
+            //}
 
-            if (compareTo == null || !GetType().Equals(compareTo.GetTypeUnproxied()))
-            {
-                return false;
-            }
+            //if (compareTo == null || !GetType().Equals(compareTo.GetTypeUnproxied()))
+            //{
+            //    return false;
+            //}
 
-            if (HasSameNonDefaultIdAs(compareTo))
-            {
-                return true;
-            }
+            //if (HasSameNonDefaultIdAs(compareTo))
+            //{
+            //    return true;
+            //}
 
             // Since the Ids aren't the same, both of them must be transient to 
             // compare domain signatures; because if one is transient and the 
