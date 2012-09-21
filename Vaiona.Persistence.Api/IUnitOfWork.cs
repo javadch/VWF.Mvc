@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Vaiona.Persistence.Api
 {
+    // maybe its better to change it to IWorkPackage
     public interface IUnitOfWork: IDisposable
     {
         IPersistenceManager PersistenceManager { get; }
