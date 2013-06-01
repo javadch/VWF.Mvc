@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Vaiona.Model.Common
+namespace Vaiona.Entities.Data
 {
     /// <summary>
     ///     Provides a standard base class for facilitating comparison of objects.

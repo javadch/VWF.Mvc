@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
+using System.Collections;
 
 namespace Vaiona.Persistence.Api
 {
@@ -20,6 +21,13 @@ namespace Vaiona.Persistence.Api
         IList<TEntity> Get();
         IList<TEntity> Get(Expression<Func<TEntity, bool>> expression);
         IList<TEntity> Get(string namedQuery, Dictionary<string, object> parameters);
+        /// <summary>
+        /// executes a query which its return type is not known at compile time. proper for reporting and charting purposes
+        /// </summary>
+        /// <param name="namedQuery"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        IList Get2(string namedQuery, Dictionary<string, object> parameters);
         IList<TEntity> Get(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false); //isNativeOrORM == false => ORM, else => Native
         IList<TEntity> Get(object criteria); // need more wrok
 

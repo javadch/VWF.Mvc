@@ -18,25 +18,31 @@ namespace Vaiona.Persistence.NH
         private static ISessionFactory sessionFactory;
         private static Configuration cfg;
         private static string configFile = "";
-        private static string mappingFolder = "";
+        private static List<string> mappingFolders = new List<string>();
 
-        public void Configure(string basePath, string databaseDilect, string connectionString = "", bool useNeutralMapping = false)
+        public void Configure(List<string> mappingFolders, string databaseDilect, string connectionString = "", bool useNeutralMapping = false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
-            Contract.Requires(Directory.Exists(basePath));
+            Contract.Requires(mappingFolders != null && mappingFolders.Count() > 0);
 
             if (sessionFactory != null)
                 return;
 
-            basePath = basePath.TrimEnd(@"\".ToCharArray());
+            mappingFolders.ForEach(p => p = p.TrimEnd(@"\".ToCharArray()));
+            NHibernatePersistenceManager.mappingFolders = mappingFolders;
+
             configFile = string.Format(@"\cfg\{0}.hibernate.cfg.xml", databaseDilect);
             cfg = new Configuration();
-            cfg.Configure(basePath + configFile);
+            cfg.Configure(mappingFolders.First() + configFile);
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different maaping files and externalizing queries
-            mappingFolder = string.Format(@"{0}\Mappings\{1}", basePath, useNeutralMapping ? "Default" : databaseDilect);
-            cfg.AddDirectory(new DirectoryInfo(mappingFolder));
+            foreach (var mappingFolder in mappingFolders)
+            {
+                string folder = mappingFolder.TrimEnd(@"\".ToCharArray());
+                folder = string.Format(@"{0}\Mappings\{1}", folder, useNeutralMapping ? "Default" : databaseDilect);
+                cfg.AddDirectory(new DirectoryInfo(folder));
+            }
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
                 cfg.SetProperty(NHibernate.Cfg.Environment.ConnectionString, connectionString);
@@ -49,10 +55,13 @@ namespace Vaiona.Persistence.NH
         public void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false)
         {
             new SchemaExport(cfg).Execute(generateScript, executeAgainstTargetDB, justDrop);
-            string postInstallationScript = string.Format(@"{0}\postInstallationScript.sql", mappingFolder);
-            if (File.Exists(postInstallationScript))
+            foreach (var mappingFolder in mappingFolders)
             {
-                executePostInstallationScript(postInstallationScript);
+                string postInstallationScript = string.Format(@"{0}\postInstallationScript.sql", mappingFolder);
+                if (File.Exists(postInstallationScript))
+                {
+                    executePostInstallationScript(postInstallationScript);
+                }
             }
         }
 

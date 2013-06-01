@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Diagnostics.Contracts;
 using NHibernate.Metadata;
 using Vaiona.Persistence.Api;
+using System.Collections;
 
 namespace Vaiona.Persistence.NH
 {
@@ -88,6 +89,22 @@ namespace Vaiona.Persistence.NH
                 }
             }
             return (query.List<TEntity>());
+        }
+
+        public IList Get2(string namedQuery, Dictionary<string, object> parameters)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+
+            IQuery query = UoW.Session.GetNamedQuery(namedQuery);
+            if (parameters != null)
+            {
+                foreach (var item in parameters)
+                {
+                    query.SetParameter(item.Key, item.Value);
+                }
+            }
+            return (query.List());
         }
 
         public IList<TEntity> Get(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false)

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 
-namespace Vaiona.Model.Common
+namespace Vaiona.Entities.Data
 {
     /// <summary>
     ///     This serves as a base interface for <see cref="EntityWithTypedId{TId}" /> and 

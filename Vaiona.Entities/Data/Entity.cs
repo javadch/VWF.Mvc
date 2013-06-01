@@ -2,7 +2,7 @@
 using System.Xml;
 using System.Linq;
 
-namespace Vaiona.Model.Common
+namespace Vaiona.Entities.Data
 {
     [Serializable]
     public abstract class BaseEntity : EntityWithTypedId<Int64>, ISystemVersionedEntity //

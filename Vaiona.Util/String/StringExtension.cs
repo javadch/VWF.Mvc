@@ -79,7 +79,7 @@ namespace System
 
         private class Rule
         {
-            private readonly Regex _regex;
+            private readonly Regex _regex; 
             private readonly string _replacement;
 
             public Rule(string pattern, string replacement)

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Vaiona.Model.Common
+namespace Vaiona.Entities.Data
 {
     public interface IAuditableEntity
     {

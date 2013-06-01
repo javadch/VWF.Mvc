@@ -55,10 +55,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Vaiona.Model.Common\Vaiona.Model.Common.csproj">
-      <Project>{A60AC05F-8C9A-4EFD-9826-452E6049DA4D}</Project>
-      <Name>Vaiona.Model.Common</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Vaiona.Util\Vaiona.Util.csproj">
       <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
       <Name>Vaiona.Util</Name>
@@ -73,8 +69,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetPath)" D:\Projects\Polltech\src\OptIran.PollTech.Pms.Shell\bin;
-copy /Y "$(TargetPath)" D:\Projects\Polltech\src\OptIran.PollTech.Relay\bin</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

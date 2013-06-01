@@ -5,7 +5,7 @@ using System.Text;
 using System.Reflection;
 using System.Xml.Serialization;
 
-namespace Vaiona.Model.Common
+namespace Vaiona.Entities.Data
 {
     [Serializable]
     public abstract class EntityWithTypedId<TId> : ComparableObject, IEntityWithTypedId<TId>
