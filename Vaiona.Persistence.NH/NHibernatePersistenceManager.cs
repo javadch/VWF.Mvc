@@ -20,9 +20,10 @@ namespace Vaiona.Persistence.NH
         private static string configFile = "";
         private static List<string> mappingFolders = new List<string>();
 
-        public void Configure(List<string> mappingFolders, string databaseDilect, string connectionString = "", bool useNeutralMapping = false)
+        public void Configure(string configFilePath, List<string> mappingFolders, string databaseDilect, string connectionString = "", bool useNeutralMapping = false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
+            Contract.Requires(!string.IsNullOrWhiteSpace(configFile));
             Contract.Requires(mappingFolders != null && mappingFolders.Count() > 0);
 
             if (sessionFactory != null)
@@ -31,9 +32,9 @@ namespace Vaiona.Persistence.NH
             mappingFolders.ForEach(p => p = p.TrimEnd(@"\".ToCharArray()));
             NHibernatePersistenceManager.mappingFolders = mappingFolders;
 
-            configFile = string.Format(@"\cfg\{0}.hibernate.cfg.xml", databaseDilect);
+            configFile = string.Format(@"{0}\{1}.hibernate.cfg.xml", configFilePath.TrimEnd(@"\".ToCharArray()), databaseDilect);
             cfg = new Configuration();
-            cfg.Configure(mappingFolders.First() + configFile);
+            cfg.Configure(configFile);
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different maaping files and externalizing queries

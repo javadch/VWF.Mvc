@@ -54,6 +54,7 @@
     <Compile Include="Cfg\AppConfiguration.cs" />
     <Compile Include="Perisan\DateTimeExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="String\StringComparer.cs" />
     <Compile Include="String\StringExtension.cs" />
     <Compile Include="Xml\XmlExtensions.cs" />
   </ItemGroup>
