@@ -33,7 +33,8 @@ namespace Vaiona.PersistenceProviders.NH
             UoW.Session.Merge<TEntity>(entity);
             return (entity);
         }
-        public bool Put(TEntity entity)
+ 
+       public bool Put(TEntity entity)
         {
             //session.Lock(entity, LockMode.None);
             applyStateInfo(entity);

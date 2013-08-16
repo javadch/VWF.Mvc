@@ -45,7 +45,14 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 if (BeforeCommit != null)
                     BeforeCommit(this, EventArgs.Empty);
+                // try detect what is going to be committed, adds, deletes, changes, and log some information about them after commit is done!                
+
                 Session.Transaction.Commit();
+                
+                if (Session.Transaction.WasCommitted)
+                {
+                    // log the changes detected in previous steps
+                }
                 if (AfterCommit != null)
                     AfterCommit(this, EventArgs.Empty);
             }
@@ -82,7 +89,10 @@ namespace Vaiona.PersistenceProviders.NH
                     Session.Transaction.Rollback();
                     if (AfterIgnore != null)
                         AfterIgnore(this, EventArgs.Empty);
-                    
+                    if (Session.Transaction.WasRolledBack)
+                    {
+                        // log
+                    }
                 }
             }
             catch (Exception ex)

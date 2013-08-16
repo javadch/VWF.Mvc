@@ -31,7 +31,7 @@ namespace Vaiona.Web.Mvc.Data
 
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            if (filterContext.ActionDescriptor.GetType().GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
+            if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
                 return;
             //if (filterContext.IsChildAction)
             //    return;
@@ -40,7 +40,7 @@ namespace Vaiona.Web.Mvc.Data
 
         public override void OnActionExecuted(ActionExecutedContext filterContext)
         {
-            if (filterContext.ActionDescriptor.GetType().GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
+            if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
                 return;
             pManager.EndConversation();
         }
