@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Vaiona.Util.Cfg;
 
 namespace Vaiona.Persistence.Api
 {
     public interface IPersistenceManager
     {
-        void Configure(string configFilePath, List<string> mappingFolders, string databaseDilect, string connectionString = "", bool useNeutralMapping = false);
+        //void Configure(string configFilePath, List<string> mappingFolders, string databaseDilect, string connectionString = "", bool useNeutralMapping = false);
+        void Configure(string connectionString = "" , string databaseDilect = "DB2Dialect", bool useNeutralMapping = false);
         void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false);
         void Start();
         void Shutdown();

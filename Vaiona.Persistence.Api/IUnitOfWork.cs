@@ -16,7 +16,7 @@ namespace Vaiona.Persistence.Api
         /// Commits all the changed made by associated repositories.
         /// Closes the transaction, so the unit is not usable to commit anymore. Use allowMultipleCommit if you need multiple consecutive commits using one UoW instance, which 
         /// commits all the changes, but then begins another transaction so that the UoW is ready to be reused.
-        /// Good for multiple step actions, commulative commit, and so on/// </summary>
+        /// Good for multiple step actions, cumulative commit, and so on/// </summary>
         void Commit();
 
 

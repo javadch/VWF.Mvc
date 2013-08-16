@@ -10,15 +10,17 @@ namespace Vaiona.Persistence.Api
     {
         public static string CreateTableName(Type entity, string baseName = "")
         {
-            // take care or ploralization
+            // take care of polarization
             string name = string.Empty;
             name = (!string.IsNullOrWhiteSpace(baseName) ? baseName : entity.Name.Pluralize().CapitalizeShort());
             return (name);
         }
 
+
+        // subject to more tests
         public static string CreateSchemaTableName(Type entity, string baseName = "")
         {
-            // take care or ploralization
+            // take care of polarization
             string name = string.Empty;
             if (AppConfiguration.UseSchemaInDatabaseGeneration)
             {

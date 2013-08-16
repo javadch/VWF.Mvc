@@ -44,9 +44,11 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="IPersistenceManager.cs" />
+    <Compile Include="IReadOnlyRepository.cs" />
     <Compile Include="IRepository.cs" />
     <Compile Include="IUnitOfWork.cs" />
     <Compile Include="PersistenceFactory.cs" />
+    <Compile Include="PersistenceUtil.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

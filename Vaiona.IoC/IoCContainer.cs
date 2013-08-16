@@ -9,5 +9,8 @@ namespace Vaiona.IoC
     {
         object Resolve<T>();
         object Resolve(Type t);
+        IoCContainer CreateSessionLevelContainer();
+        object ResolveForSession<T>();
+        object ResolveForSession(Type t);
     }
 }

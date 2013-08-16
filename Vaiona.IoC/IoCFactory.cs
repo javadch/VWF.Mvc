@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Vaiona.Util.Cfg;
+using Vaiona.IoC.Unity;
 
 namespace Vaiona.IoC
 {
@@ -24,7 +25,7 @@ namespace Vaiona.IoC
                 container = Activator.CreateInstance(concreteIoCType, configFilePath, containerName, optionals) as IoCContainer;
             }
             else
-                throw new InvalidOperationException("The IoC container is already loaded. Destroy it first if you want ro reconfigure it");
+                throw new InvalidOperationException("The IoC container is already loaded. Destroy it first if you want or reconfigure it");
             // Registrations
             //container.RegisterType<myFinanceData, myFinanceData>(new HttpContextLifetimeManager<myFinanceData>());
             //ControllerBuilder.Current.SetControllerFactory(new Vaiona.Web.Controllers.UnityControllerFactory(container));

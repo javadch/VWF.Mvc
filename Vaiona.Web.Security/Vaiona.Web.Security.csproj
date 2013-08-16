@@ -34,8 +34,8 @@
     <Reference Include="Iesi.Collections">
       <HintPath>..\packages\Iesi.Collections.3.2.0.4000\lib\Net35\Iesi.Collections.dll</HintPath>
     </Reference>
-    <Reference Include="NHibernate">
-      <HintPath>..\packages\NHibernate.3.3.3.4000\lib\Net35\NHibernate.dll</HintPath>
+    <Reference Include="NHibernate, Version=3.3.1.4000, Culture=neutral, PublicKeyToken=aa95f207798dfdb4, processorArchitecture=MSIL">
+      <HintPath>..\packages\NHibernate.3.3.3.4001\lib\Net35\NHibernate.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -84,6 +84,10 @@
     <ProjectReference Include="..\Vaiona.Persistence.Api\Vaiona.Persistence.Api.csproj">
       <Project>{640BF81D-354A-4BF0-85FC-F0AD587CF8A2}</Project>
       <Name>Vaiona.Persistence.Api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vaiona.Web.Mvc\Vaiona.Web.Mvc.csproj">
+      <Project>{5F5D22E8-8C05-49CD-854E-8FE8EFF1AA6C}</Project>
+      <Name>Vaiona.Web.Mvc</Name>
     </ProjectReference>
     <ProjectReference Include="..\Vaiona.Web\Vaiona.Web.csproj">
       <Project>{5B48B5A8-EAE8-4EF8-8F2C-7FEDB1B095D3}</Project>

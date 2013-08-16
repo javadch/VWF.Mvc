@@ -271,8 +271,8 @@ namespace Vaiona.Web.Security.Az.Attributes
         }       
     }
 
-    public class AllowAnonymousAttribute : Attribute
-    {
-    }
+    //public class AllowAnonymousAttribute : Attribute
+    //{
+    //}
 }
 

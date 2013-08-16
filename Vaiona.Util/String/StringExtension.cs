@@ -194,7 +194,7 @@ namespace System
         }
 
         /// <summary>
-        /// Capatalize the first letter and do not tuch the rest, it is not like PascalCase!
+        /// Capitalize the first letter and do not tuch the rest, it is not like PascalCase!
         /// </summary>
         /// <param name="word"></param>
         /// <returns></returns>
@@ -240,10 +240,32 @@ namespace System
             }
         }
 
-
         public static string Dasherize(this string underscoredWord)
         {
             return underscoredWord.Replace('_', '-');
+        }
+
+        // subject to more tests
+        public static string Truncate(this string input, int length)
+        {
+            if (input.Length <= length) return input;
+            else return input.Substring(0, length) + "..."; // length -3 ?? Javad
+        }
+
+        // subject to more tests
+        private static string keywordPattern(string searchKeyword)
+        {
+            var keywords = searchKeyword.Split(',').Select(k => k.Trim()).Where(k => k != "").Select(k => Regex.Escape(k));
+
+            return @"\b(" + string.Join("|", keywords) + @")\b";
+        }
+
+        // subject to more tests
+        public static bool ContainsExact(this string input, string searchKeywords)
+        {
+            var pattern = keywordPattern(searchKeywords);
+            Regex exp = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            return exp.IsMatch(input);
         }
     }
 }

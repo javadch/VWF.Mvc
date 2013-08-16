@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Web.Mvc;
-using Vaiona.Web.Context;
 using Vaiona.Web.Security.Az.Attributes;
 using Vaiona.Persistence.Api;
 using Vaiona.Entities.Security;
 using System.Collections;
+using Vaiona.Web.Mvc;
 
 namespace Vaiona.Web.Security.Management
 {
@@ -146,19 +146,19 @@ namespace Vaiona.Web.Security.Management
 
         public void ExportSecuirtyFeaturesToDatabase()
         {
-            foreach (var area in AppUtils.Areas)
+            foreach (var area in ModuleManager.Areas)
             {
                 // complete feature key + display name
                 // add the area to the DB
                 AccessRuleEntity areaEntity = addFeatureToDB(area.AreaName, area.AreaName, null);
-                foreach (var controller in AppUtils.GetControllersByArea(area))
+                foreach (var controller in ModuleManager.GetControllersByArea(area))
                 {
                     // add area.controller to the DB
                     string controllerName = controller.Name.Replace("Controller", "");
                     string controllerKey = string.Format("{0}.{1}", area.AreaName, controllerName);
                     AccessRuleEntity controllerEntity = addFeatureToDB(controllerKey, controllerName, areaEntity);
-                    var securedActions = AppUtils.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() <= 0).ToList();
-                    var openActions = AppUtils.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() > 0).ToList();
+                    var securedActions = ModuleManager.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() <= 0).ToList();
+                    var openActions = ModuleManager.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() > 0).ToList();
                     foreach (var action in securedActions)
                     {
                         // add the area.controller.action to the DB
