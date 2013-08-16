@@ -63,6 +63,18 @@ namespace Vaiona.Util.Cfg
             }
         }
 
+        public static bool AutoCommitTransactions
+        {
+            get
+            {
+                try
+                {
+                    return (bool.Parse(ConfigurationManager.AppSettings["AutoCommitTransactions"]));
+                }
+                catch { return (false); }
+            }
+        }
+
         public static string IoCProviderTypeInfo
         {
             get

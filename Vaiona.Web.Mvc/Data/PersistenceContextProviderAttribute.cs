@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web.Mvc;
 using Vaiona.Persistence.Api;
+using Vaiona.Util.Cfg;
 
 namespace Vaiona.Web.Mvc.Data
 {
@@ -35,6 +36,10 @@ namespace Vaiona.Web.Mvc.Data
                 return;
             //if (filterContext.IsChildAction)
             //    return;
+
+            // conversations are managed per request, which means one conversation is created and torn down per MVC action
+            // this mechanism does not support conversation per web session! if that scenario is needed the right way is not move StartConversation and Shutdown/ EndConversation methods
+            // to Session_Start and Session_End respectively. The scenario is not tested, though!
             pManager.StartConversation();
         }
 
@@ -42,7 +47,10 @@ namespace Vaiona.Web.Mvc.Data
         {
             if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
                 return;
-            pManager.EndConversation();
+            if (AppConfiguration.AutoCommitTransactions)
+                pManager.EndConversation();
+            else
+                pManager.ShutdownConversation();                        
         }
 
         public override void OnResultExecuted(ResultExecutedContext filterContext)
@@ -55,7 +63,7 @@ namespace Vaiona.Web.Mvc.Data
 
         public void OnException(ExceptionContext filterContext)
         {
-            pManager.EndConversation();
+            pManager.ShutdownConversation();
             //pManager.EndContext();
         }
     }

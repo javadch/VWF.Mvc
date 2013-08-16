@@ -51,7 +51,7 @@
     <Compile Include="NHibernatePersistenceManager.cs" />
     <Compile Include="NHibernateReadonlyRepository.cs" />
     <Compile Include="NHibernateRepository.cs" />
-    <Compile Include="NHibernateSessionProvider.cs" />
+    <Compile Include="NHibernateCurrentSessionProvider.cs" />
     <Compile Include="NHibernateUnitOfWork.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

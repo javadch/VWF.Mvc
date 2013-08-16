@@ -18,6 +18,14 @@ namespace Vaiona.Persistence.Api
 
         object GetCurrentConversation();
         void StartConversation();
+        /// <summary>
+        /// Closes the session and rollbacks all the changes
+        /// </summary>
+        void ShutdownConversation();
+
+        /// <summary>
+        /// Closes the session but first commits all the changes
+        /// </summary>
         void EndConversation();
         void EndContext();
     }

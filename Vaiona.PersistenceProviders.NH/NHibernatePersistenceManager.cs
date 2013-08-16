@@ -18,7 +18,7 @@ namespace Vaiona.PersistenceProviders.NH
     {
         private static ISessionFactory sessionFactory;
         private static Configuration cfg;
-        private static string configFile = "";
+        //private static string configFile = "";
 
         private List<string> componentFolders = new List<string>();
         private List<string> moduleFolders = new List<string>();
@@ -37,7 +37,7 @@ namespace Vaiona.PersistenceProviders.NH
 
             //  Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass). This way the sessionFactory.GetCurrentSession
             // will call the CurrentSession method of this class.
-            cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateSessionProvider).AssemblyQualifiedName;
+            cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateCurrentSessionProvider).AssemblyQualifiedName;
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
@@ -130,7 +130,6 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
-
         public IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
@@ -154,7 +153,17 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 var localFactory = sessionFactory;
 
-                NHibernateSessionProvider.Bind(new Lazy<ISession>(() => beginSession(localFactory)), sessionFactory);
+                NHibernateCurrentSessionProvider.Bind(new Lazy<ISession>(() => beginSession(localFactory)), sessionFactory);
+            }
+        }
+
+        public void ShutdownConversation()
+        {
+            foreach (var sessionfactory in getSessionFactories())
+            {
+                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
+                if (session == null) continue;
+                endSession(session, false);
             }
         }
 
@@ -162,9 +171,9 @@ namespace Vaiona.PersistenceProviders.NH
         {
             foreach (var sessionfactory in getSessionFactories())
             {
-                var session = NHibernateSessionProvider.UnBind(sessionfactory);
+                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
                 if (session == null) continue;
-                endSession(session);
+                endSession(session, true);
             }
         }
 
@@ -172,7 +181,7 @@ namespace Vaiona.PersistenceProviders.NH
         {
             foreach (var sessionfactory in getSessionFactories())
             {
-                var session = NHibernateSessionProvider.UnBind(sessionfactory);
+                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
                 if (session == null) continue;
                 endSession(session, false);
             }

@@ -38,7 +38,7 @@ namespace Vaiona.Web.HttpModules
             {
                 return;
             }
-            pManager.EndConversation();
+            pManager.ShutdownConversation();
         }
 
         private void ContextError(object sender, EventArgs e)
