@@ -21,12 +21,14 @@ namespace Vaiona.PersistenceProviders.NH
             this.UoW = uow;
         }
 
-        public void Evict<TEntity>()
+        public IUnitOfWork UnitOfWork { get { return (UoW);} }
+
+        public void Evict()
         {
             UoW.Session.SessionFactory.Evict(typeof(TEntity));
         }
 
-        public void Evict<TEntity>(object id)
+        public void Evict(object id)
         {
             UoW.Session.SessionFactory.Evict(typeof(TEntity), id);
         }
@@ -34,11 +36,6 @@ namespace Vaiona.PersistenceProviders.NH
         public void Evict(TEntity entity)
         {
             UoW.Session.Evict(entity);
-        }
-
-        public void ClearCache()
-        {
-            UoW.Session.Clear();
         }
 
         public TEntity Get(long id)
@@ -61,7 +58,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public TEntity Refresh(Int64 id)
         {
-            Evict<TEntity>(id);
+            Evict(id);
             return (UoW.Session.Get<TEntity>(id)); 
         }
 

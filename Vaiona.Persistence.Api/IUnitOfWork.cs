@@ -11,6 +11,7 @@ namespace Vaiona.Persistence.Api
         IPersistenceManager PersistenceManager { get; }
         IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>() where TEntity : class;
         IRepository<TEntity> GetRepository<TEntity>() where TEntity : class;
+        void ClearCache();
 
         /// <summary>
         /// Commits all the changed made by associated repositories.

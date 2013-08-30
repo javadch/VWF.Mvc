@@ -9,10 +9,10 @@ namespace Vaiona.Persistence.Api
 {
     public interface IReadOnlyRepository<TEntity> where TEntity : class // BaseEntity
     {
-        void Evict<TEntity>();
-        void Evict<TEntity>(object id);
+        void Evict();
+        void Evict(object id);
         void Evict(TEntity entity);
-        void ClearCache();
+        IUnitOfWork UnitOfWork { get; }
 
         TEntity Reload(TEntity entity);
         TEntity Refresh(Int64 id);

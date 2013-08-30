@@ -7,7 +7,7 @@ using Vaiona.Core.Serialization;
 namespace Vaiona.Entities.Common
 {
     [Serializable]
-    public abstract class BaseEntity : EntityWithTypedId<Int64>, ISystemVersionedEntity //
+    public abstract class BaseEntity : ISystemVersionedEntity //EntityWithTypedId<Int64>
     {
         #region Fields        
 
@@ -15,7 +15,7 @@ namespace Vaiona.Entities.Common
        
         #region Attributes
 
-        //public virtual Int64 Id { get; set; }
+        public virtual Int64 Id { get; set; }
 
         public virtual Int32 VersionNo { get; set; }
         //public virtual DateTime? TimeStamp { get; set; }

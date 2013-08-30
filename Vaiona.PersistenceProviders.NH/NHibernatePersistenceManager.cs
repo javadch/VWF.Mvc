@@ -203,6 +203,8 @@ namespace Vaiona.PersistenceProviders.NH
                 // try get the session after starting a new conversation
                 session = sessionFactory.GetCurrentSession();
             }
+            //this flush mode will flush on manual flushes and when transactions are committed.
+            session.FlushMode = FlushMode.Commit;
             return (session);
         }
 
@@ -235,12 +237,13 @@ namespace Vaiona.PersistenceProviders.NH
                     {
                         try
                         {
-                            session.Transaction.Commit();
+                            if(session.IsDirty())
+                                session.Transaction.Commit();
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             session.Transaction.Rollback();
-                            throw;
+                            throw new Exception("There were some changes submitted to the system, but could not be committed!", ex);
                         }
                     }
                     else

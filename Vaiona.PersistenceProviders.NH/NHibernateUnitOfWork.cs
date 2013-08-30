@@ -39,6 +39,12 @@ namespace Vaiona.PersistenceProviders.NH
             return (repo);
         }
 
+        public void ClearCache()
+        {
+            Session.Clear();
+        }
+
+
         public void Commit()
         {
             try
