@@ -7,9 +7,16 @@ namespace Vaiona.IoC
 {
     public interface IoCContainer
     {
-        object Resolve<T>();
         object Resolve(Type t);
-        IoCContainer CreateSessionLevelContainer();
+        //IEnumerable<object> ResolveAll(Type t);
+
+        object Resolve<T>();
+        //IEnumerable<T> ResolveAll<T>();
+        
+        void Teardown(object obj);
+        
+        void StartSessionLevelContainer();
+        void ShutdownSessionLevelContainer();
         object ResolveForSession<T>();
         object ResolveForSession(Type t);
     }
