@@ -95,6 +95,24 @@ namespace Vaiona.Util.Cfg
             }
         }
 
+        /// <summary>
+        /// DataPath shows the root folder containing business data. 
+        /// Its should be defined in the web.config otherwise it returns the application root folder
+        /// </summary>
+        public static string DataPath
+        {
+            get
+            {
+                string path = AppRoot;
+                try
+                {
+                    path = ConfigurationManager.AppSettings["DataPath"];
+                }
+                catch{}
+                return (path);
+            }
+        }
+
         private static string workspaceRootPath = string.Empty;
         public static string WorkspaceRootPath
         {

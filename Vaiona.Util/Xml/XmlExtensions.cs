@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using System.IO;
 
 namespace Vaiona.Util.Xml
 {
@@ -28,5 +29,13 @@ namespace Vaiona.Util.Xml
             }
         }
 
+        public static string AsString(this XmlDocument xmlDoc)
+        {
+            StringWriter sw = new StringWriter();
+            XmlTextWriter tx = new XmlTextWriter(sw);
+            xmlDoc.WriteTo(tx);
+            string strXmlText = sw.ToString();
+            return strXmlText;
+        }
     }
 }

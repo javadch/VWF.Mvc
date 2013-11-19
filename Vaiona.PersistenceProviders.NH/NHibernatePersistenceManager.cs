@@ -20,6 +20,8 @@ namespace Vaiona.PersistenceProviders.NH
         private static Configuration cfg;
         //private static string configFile = "";
 
+        public object Factory { get { return sessionFactory; } }
+
         private List<string> componentFolders = new List<string>();
         private List<string> moduleFolders = new List<string>();
         
