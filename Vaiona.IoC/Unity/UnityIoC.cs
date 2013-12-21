@@ -73,9 +73,13 @@ namespace Vaiona.IoC.Unity
 
         public void ShutdownSessionLevelContainer()
         {
-            UnityIoC child = HttpContext.Current.Session[sessionKey] as UnityIoC;
-            children.Remove(child);
-            child = null;
+            UnityIoC child = null;
+            try
+            {
+                child = HttpContext.Current.Session[sessionKey] as UnityIoC;
+                children.Remove(child);
+            }
+            catch { child = null; } // when the session is timed out, it happens that the Session object is not available anymore
         }
 
         public void Teardown(object obj)

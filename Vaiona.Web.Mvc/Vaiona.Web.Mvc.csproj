@@ -53,6 +53,7 @@
     <Compile Include="CollectionHelper.cs" />
     <Compile Include="Data\DoesNotNeedDataAccess.cs" />
     <Compile Include="Data\PersistenceContextProviderAttribute.cs" />
+    <Compile Include="Filters\AuthorizationDelegationFilter.cs" />
     <Compile Include="HtmlHelperExtensions.cs" />
     <Compile Include="LayoutManager.cs" />
     <Compile Include="Models\ActionModel.cs" />

@@ -109,6 +109,7 @@ namespace Vaiona.Util.Cfg
                     path = ConfigurationManager.AppSettings["DataPath"];
                 }
                 catch{}
+                path = (string.IsNullOrWhiteSpace(path)? AppRoot: path);
                 return (path);
             }
         }
