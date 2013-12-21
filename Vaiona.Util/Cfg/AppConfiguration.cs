@@ -147,7 +147,7 @@ namespace Vaiona.Util.Cfg
                 {
                     di = di.Parent;
                 }
-                workspaceRootPath = Path.Combine(di.Parent.FullName, "Workspace");
+                workspaceRootPath = Path.Combine(di.FullName, "Workspace");
                 return (workspaceRootPath);
             }
         }

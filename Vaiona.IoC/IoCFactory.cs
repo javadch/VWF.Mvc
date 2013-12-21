@@ -21,7 +21,10 @@ namespace Vaiona.IoC
                 {
                     concreteIoCType = Type.GetType(typeName);
                 }
-                catch {} // use the default IoC
+                catch 
+                {
+                    concreteIoCType = typeof(UnityIoC);
+                } // use the default IoC
                 container = Activator.CreateInstance(concreteIoCType, configFilePath, containerName, optionals) as IoCContainer;
             }
             else
