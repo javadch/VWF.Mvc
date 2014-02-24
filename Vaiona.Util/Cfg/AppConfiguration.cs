@@ -143,7 +143,7 @@ namespace Vaiona.Util.Cfg
                 DirectoryInfo di = new DirectoryInfo(AppRoot);
                 while (di.GetFiles("Web.config").Count() >= 1)
                     di = di.Parent;
-                for (int i = 0; i < level; i++)
+                for (int i = 0; i <= level; i++)
                 {
                     di = di.Parent;
                 }

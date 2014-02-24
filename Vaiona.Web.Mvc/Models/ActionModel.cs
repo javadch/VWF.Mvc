@@ -10,6 +10,7 @@ namespace Vaiona.Web.Mvc.Models
     {
         public string ContentKey { get; set; }
         public string Type { get; set; }
+        public bool IsEnabled { get; set; }
 
         public string AreaName { get; set; }
         public string ControllerName { get; set; }

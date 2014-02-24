@@ -36,7 +36,9 @@ namespace Vaiona.PersistenceProviders.NH
             string configFileFullPath = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Db", "Settings", configFileName);
             cfg = new Configuration();
             cfg.Configure(configFileFullPath);
-
+#if DEBUG
+            cfg.SetInterceptor(new NHInterceptor());
+#endif
             //  Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass). This way the sessionFactory.GetCurrentSession
             // will call the CurrentSession method of this class.
             cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateCurrentSessionProvider).AssemblyQualifiedName;
@@ -224,7 +226,11 @@ namespace Vaiona.PersistenceProviders.NH
 
         private static ISession beginSession(ISessionFactory sessionFactory)
         {
+#if DEBUG
+            var session = sessionFactory.OpenSession(cfg.Interceptor);
+#else
             var session = sessionFactory.OpenSession();
+#endif
             session.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
             return session;
         }

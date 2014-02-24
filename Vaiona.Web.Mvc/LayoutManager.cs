@@ -22,7 +22,7 @@ namespace Vaiona.Web.Mvc
             {
                 string output = string.Empty;
                 List<ActionModel> acModels = getContentProviderInfo(contentKey, data);
-                foreach (var acModel in acModels)
+                foreach (var acModel in acModels.Where(p=>p.IsEnabled == true))
                 {
                     if (acModel.Type.Equals("Action", StringComparison.InvariantCultureIgnoreCase))
                     {
@@ -58,6 +58,7 @@ namespace Vaiona.Web.Mvc
         // If a parameter is in the overridingParameters list, its value will override the one defined in the content map
         private static MvcHtmlString RenderContent(this HtmlHelper helper, ActionModel actionModel)
         {
+            // the IsEnabled should be checked by the caller
             return (helper.Action(actionModel.ActionName, actionModel.ControllerName, actionModel.Parameters)); // maybe RenderAction is better
         }
 
@@ -96,7 +97,14 @@ namespace Vaiona.Web.Mvc
                 {
                     Type = contentProvider.Attribute("Type").Value,
                     ContentKey = contentKey,
+                    IsEnabled = true,
                 };
+                try
+                {
+                    actionModel.IsEnabled = bool.Parse(contentProvider.Attribute("Enabled").Value);
+                }
+                catch { }
+
                 actionModels.Add(actionModel);
                 if (actionModel.Type.Equals("Action", StringComparison.InvariantCultureIgnoreCase))
                 {

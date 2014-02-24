@@ -255,7 +255,7 @@ namespace Vaiona.Web.Security.Az.Attributes
                     AccessRule = AccessRule.Trim(" & ".ToCharArray());
                     break;
                 case AccessRuleMergeOption.Normal:
-                    AccessRule = rules.Last().RuleBody; // fetchs more than required, but is the NH.Linq issue
+                    AccessRule = rules.Last().RuleBody; // fetches more than required, but is the NH.Linq issue
                     break;
                 default:
                     break;
@@ -271,8 +271,8 @@ namespace Vaiona.Web.Security.Az.Attributes
         }       
     }
 
-    public class AllowAnonymousAttribute : Attribute
-    {
-    }
+    //public class AllowAnonymousAttribute : Attribute
+    //{
+    //}
 }
 
