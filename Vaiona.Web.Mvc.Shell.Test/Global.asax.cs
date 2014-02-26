@@ -40,7 +40,7 @@ namespace Vaiona.Web.Mvc.Shell.Test
             IoCFactory.StartContainer(Path.Combine(AppConfiguration.AppRoot, "IoC.config"), "DefaultContainer"); // use AppConfig to access the app root folder
             //loadModules();
             IPersistenceManager pManager = PersistenceFactory.GetPersistenceManager(); // just to prepare data access environment
-            pManager.Configure(); //, AppConfiguration.DefaultApplicationConnection.ConnectionString);
+            pManager.Configure(AppConfiguration.DefaultApplicationConnection.ConnectionString, AppConfiguration.DatabaseDialect); //, AppConfiguration.DefaultApplicationConnection.ConnectionString);
             if (AppConfiguration.CreateDatabase)
                 pManager.ExportSchema();
             pManager.Start();

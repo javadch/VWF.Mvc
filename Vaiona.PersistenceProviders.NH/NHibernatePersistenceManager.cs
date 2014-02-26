@@ -22,10 +22,10 @@ namespace Vaiona.PersistenceProviders.NH
 
         public object Factory { get { return sessionFactory; } }
 
-        private List<string> componentFolders = new List<string>();
-        private List<string> moduleFolders = new List<string>();
+        Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
+        Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         
-        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", bool useNeutralMapping = false)
+        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default")
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
 
@@ -45,8 +45,8 @@ namespace Vaiona.PersistenceProviders.NH
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
-            registerComponentMappings(cfg, useNeutralMapping ? "Default" : databaseDilect);
-            registerModuleMappings(cfg, useNeutralMapping ? "Default" : databaseDilect);
+            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceComponentRoot);
+            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceModulesRoot);
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
@@ -61,29 +61,27 @@ namespace Vaiona.PersistenceProviders.NH
         {
             // think of installing a module separately: export that module to DB, add entries to cfg., restart cfg and session factory, etc.
             new SchemaExport(cfg).Execute(generateScript, executeAgainstTargetDB, justDrop);
-            foreach (string comDir in componentFolders)
+            foreach (var component in componentPostInstallationFiles)
             {
-                string postInstallationScript = Path.Combine(comDir, "Db", "PostInstallationScript.sql");
-                if (File.Exists(postInstallationScript))
+                foreach (var file in component.Value)
                 {
-                    executePostInstallationScript(postInstallationScript);
+                    executePostInstallationScript(file);
                 }
             }
-            foreach (string modDir in moduleFolders)
+            foreach (var module in modulePostInstallationFiles)
             {
-                string postInstallationScript = Path.Combine(modDir, "Db", "PostInstallationScript.sql");
-                if (File.Exists(postInstallationScript))
+                foreach (var file in module.Value)
                 {
-                    executePostInstallationScript(postInstallationScript);
+                    executePostInstallationScript(file);
                 }
-            }
+            }           
         }
 
-        private void executePostInstallationScript(string postInstallationScript)
+        private void executePostInstallationScript(FileInfo postInstallationScript)
         {
             string sql;
 
-            using (FileStream strm = File.OpenRead(postInstallationScript))
+            using (FileStream strm = postInstallationScript.OpenRead())
             {
                 var reader = new StreamReader(strm);
                 sql = reader.ReadToEnd();
@@ -269,32 +267,97 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
-        private void registerModuleMappings(Configuration cfg, string dialect)
-        {
-            //check the modules' statuses with the module registration system and register the mappings just for valid ones
-            //throw new NotImplementedException();
-            // add module folders to the list
-        }
-
         /// <summary>
         /// Any component dealing with data should have a Db folder in its workspace folder containing the Mappings folder
         /// If the components accesses data through other components' APIs there is no need to provide the mapping again
         /// </summary>
         /// <param name="cfg"></param>
-        private void registerComponentMappings(Configuration cfg, string dialect)
+        private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath)
         {
-            string componentsRoot = AppConfiguration.WorkspaceComponentRoot;
-            if (!Directory.Exists(componentsRoot))
+            if (!Directory.Exists(componentOrModulePath))
                 return;
-            foreach (string comDir in Directory.GetDirectories(componentsRoot))
+            DirectoryInfo componentsRootDir = new DirectoryInfo(componentOrModulePath);
+            foreach (DirectoryInfo componentDir in componentsRootDir.GetDirectories())
             {
-                string mappingFolder = Path.Combine(comDir, "Db", "Mappings", dialect);
-                if (Directory.Exists(mappingFolder))
+                List<FileInfo> mappingFiles = compileMappingFileList(componentDir, fallbackFoler, dialect, ref componentPostInstallationFiles);
+
+                mappingFiles.ForEach(p => cfg.AddFile(p));
+            }
+        }
+
+        private List<FileInfo> compileMappingFileList(DirectoryInfo comDir, string fallbackFolerName, string dialectName, ref Dictionary<string, List<FileInfo>> post)
+        {            
+            string fallbackFolderPath = Path.Combine(comDir.FullName, "Db", "Mappings", fallbackFolerName);
+            string dialectFolderPath = Path.Combine(comDir.FullName, "Db", "Mappings", dialectName);
+
+            Dictionary<string, FileInfo> compiledList = getMappingsFrom(fallbackFolderPath);
+            Dictionary<string, FileInfo> dialectList = getMappingsFrom(dialectFolderPath);
+            //merge the lists into the compiledList
+            foreach (var item in dialectList)
+            {
+                if (compiledList.ContainsKey(item.Key))
                 {
-                    cfg.AddDirectory(new DirectoryInfo(mappingFolder));
-                    componentFolders.Add(comDir);
+                    compiledList[item.Key] = item.Value;
+                }
+                else
+                {
+                    compiledList.Add(item.Key, item.Value);
                 }
             }
+
+            List<FileInfo> fallbackPost = getPostInstallationInfo(fallbackFolderPath);
+            List<FileInfo> dialectPost = getPostInstallationInfo(dialectFolderPath);
+            List<FileInfo> compiledPost = fallbackPost.ToList();
+            foreach (var item in dialectPost)
+            {
+                var dup = fallbackPost.Where(p => p.Name.Equals(item.Name)).FirstOrDefault();
+                if (dup != null) // the dialect has overwritten the fallback
+                {
+                    compiledPost.Remove(dup);
+                }
+                // the dialect has added a file                                
+                compiledPost.Add(item);
+            }
+            post.Add(comDir.Name, compiledPost);
+            return (compiledList.Values.ToList());
+        }
+
+        private List<FileInfo> getPostInstallationInfo(string mappingPath)
+        {
+            if (Directory.Exists(mappingPath))
+            {
+                DirectoryInfo postObjectsDir = (new DirectoryInfo(mappingPath)).GetDirectories().Where(p => p.Name.Equals("PostObjects")).FirstOrDefault();
+                if (postObjectsDir != null)
+                {
+                    return (postObjectsDir.GetFiles().Where(p => p.Name.EndsWith(".sql")).ToList());
+                }
+            }
+            return (new List<FileInfo>());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mappingPath">is the full path to a fallback or a dialect mapping folder for a specific component or module</param>
+        /// <returns></returns>
+        private Dictionary<string, FileInfo> getMappingsFrom(string mappingPath)
+        {
+            Dictionary<string, FileInfo> fileList = new Dictionary<string, FileInfo>();
+            if (Directory.Exists(mappingPath))
+            {
+                // go through all the folders in the mapping container and add them to the mapping file list, expect for the PostObjects folder
+                // which is a specific folder designed to contain post installation scripts
+                DirectoryInfo mappingRootDir = new DirectoryInfo(mappingPath);
+                
+                foreach (var mappingContainerDir in mappingRootDir.GetDirectories().Where(p=> !p.Name.Equals("PostObjects")))
+                {
+                    mappingContainerDir.GetFiles().Where(p => p.Name.EndsWith(".hbm.xml")) //filter just the valid mapping files
+                        .ToList().ForEach(p =>
+                        fileList.Add(string.Format("{0}.{1}", mappingContainerDir.Name, p.Name), p)); // Key: provides a uniqueness control inside the component/ module, required for overwriting procedure
+                }
+            }
+            //else // there is no mapping folder, so expect all the mappings to be in the dialect folder or no mapping at all            
+            return (fileList);
         }
     }
 }
