@@ -45,8 +45,8 @@ namespace Vaiona.PersistenceProviders.NH
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
-            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceComponentRoot);
-            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceModulesRoot);
+            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles);
+            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
@@ -271,20 +271,32 @@ namespace Vaiona.PersistenceProviders.NH
         /// Any component dealing with data should have a Db folder in its workspace folder containing the Mappings folder
         /// If the components accesses data through other components' APIs there is no need to provide the mapping again
         /// </summary>
-        /// <param name="cfg"></param>
-        private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath)
+        /// <param name="cfg"> the NH configuration object that the mapping files are registered with it.</param>
+        /// <param name="fallbackFoler">The folder than contains default and DBMS neutral mapping files</param>
+        /// <param name="dialect">The specific DBMS dialect to be used in the current configuration</param>
+        /// <param name="componentOrModulePath">if module: this is the root folder of all the modules. if component, the root folder containing all the components</param>
+        /// <param name="post">holds a reference to the post installation files compiled from merging of the PostObjects folder of the fallback and dialect folders</param>
+        private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath, ref Dictionary<string, List<FileInfo>> post)
         {
             if (!Directory.Exists(componentOrModulePath))
                 return;
-            DirectoryInfo componentsRootDir = new DirectoryInfo(componentOrModulePath);
-            foreach (DirectoryInfo componentDir in componentsRootDir.GetDirectories())
+            DirectoryInfo rootDir = new DirectoryInfo(componentOrModulePath);
+            foreach (DirectoryInfo moduleOrComponentDir in rootDir.GetDirectories())
             {
-                List<FileInfo> mappingFiles = compileMappingFileList(componentDir, fallbackFoler, dialect, ref componentPostInstallationFiles);
-
+                List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
                 mappingFiles.ForEach(p => cfg.AddFile(p));
             }
         }
 
+        /// <summary>
+        /// takes a component or a module, extracts the mapping files from the fallback and dialect directories and merges them by overwriting the fallback ones by their dialect's counterparts if exists.
+        /// The function also do the same for post installation files.
+        /// </summary>
+        /// <param name="comDir">The module or component root folder</param>
+        /// <param name="fallbackFolerName">the name of the fallback folder. It is not mandatory to provide a fallback folder if it doesn't apply</param>
+        /// <param name="dialectName">the name of the dialect, should be same as the dialect folder name. It is not mandatory to provide a dialect folder if it doesn't apply, i.e. when there is nothing specific to the dialect</param>
+        /// <param name="post">the reference to the post installation files list</param>
+        /// <returns>the merged mapping files list created from fallback and/ or dialect folders</returns>
         private List<FileInfo> compileMappingFileList(DirectoryInfo comDir, string fallbackFolerName, string dialectName, ref Dictionary<string, List<FileInfo>> post)
         {            
             string fallbackFolderPath = Path.Combine(comDir.FullName, "Db", "Mappings", fallbackFolerName);
@@ -336,10 +348,12 @@ namespace Vaiona.PersistenceProviders.NH
         }
 
         /// <summary>
-        /// 
+        /// Iterates over all first level child folders to obtain all the mapping files having .bhm.xml extension.
+        /// When obtained, arranges them in a dictionary, in that the key is constructed from the holding folder name followed by the file name.
+        /// The key is used for later overwriting by dialect's provided files.
         /// </summary>
         /// <param name="mappingPath">is the full path to a fallback or a dialect mapping folder for a specific component or module</param>
-        /// <returns></returns>
+        /// <returns>all mapping files in the subfolders of mappingPath in a dictionary</returns>
         private Dictionary<string, FileInfo> getMappingsFrom(string mappingPath)
         {
             Dictionary<string, FileInfo> fileList = new Dictionary<string, FileInfo>();
