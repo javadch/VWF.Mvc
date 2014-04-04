@@ -25,7 +25,7 @@ namespace Vaiona.PersistenceProviders.NH
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         
-        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default")
+        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default", bool showQueries=false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
 
@@ -36,9 +36,9 @@ namespace Vaiona.PersistenceProviders.NH
             string configFileFullPath = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Db", "Settings", configFileName);
             cfg = new Configuration();
             cfg.Configure(configFileFullPath);
-#if DEBUG
-            cfg.SetInterceptor(new NHInterceptor());
-#endif
+            if(showQueries)
+                cfg.SetInterceptor(new NHInterceptor());
+
             //  Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass). This way the sessionFactory.GetCurrentSession
             // will call the CurrentSession method of this class.
             cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateCurrentSessionProvider).AssemblyQualifiedName;

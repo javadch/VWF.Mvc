@@ -11,7 +11,7 @@ namespace Vaiona.PersistenceProviders.NH
     {
         NHibernate.SqlCommand.SqlString IInterceptor.OnPrepareStatement(NHibernate.SqlCommand.SqlString sql)
         {
-            Debug.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + sql.ToString());
+            Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + sql.ToString());
             //NHSQL.NHibernateSQL.Add(sql.ToString());
             return sql;
         }

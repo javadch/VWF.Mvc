@@ -222,6 +222,18 @@ namespace Vaiona.Util.Cfg
             }
         }
 
+        public static bool ShowQueries
+        {
+            get
+            {
+                try
+                {
+                    return (bool.Parse(ConfigurationManager.AppSettings["ShowQueries"]));
+                }
+                catch { return (false); }
+            }
+        }
+
         public static string ThemesPath
         {
             get

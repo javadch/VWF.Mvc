@@ -9,7 +9,7 @@ namespace Vaiona.Persistence.Api
     public interface IPersistenceManager
     {
         object Factory { get; }
-        void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default");
+        void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default", bool showQueries = false);
         void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false);
         void Start();
         void Shutdown();
