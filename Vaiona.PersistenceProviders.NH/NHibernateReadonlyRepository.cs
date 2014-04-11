@@ -59,7 +59,7 @@ namespace Vaiona.PersistenceProviders.NH
         public TEntity Refresh(Int64 id)
         {
             Evict(id);
-            return (UoW.Session.Get<TEntity>(id)); 
+            return (UoW.Session.Load<TEntity>(id)); 
         }
 
         public IList<TEntity> Get(Expression<Func<TEntity, bool>> expression)
@@ -133,7 +133,6 @@ namespace Vaiona.PersistenceProviders.NH
             throw new NotImplementedException();
         }
 
-
         public IQueryable<TEntity> Query()
         {
             return (UoW.Session.Query<TEntity>());
@@ -153,7 +152,6 @@ namespace Vaiona.PersistenceProviders.NH
         {
             throw new NotImplementedException();
         }
-
     
         public bool IsPropertyLoaded(object proxy, string propertyName)
         {
@@ -169,6 +167,16 @@ namespace Vaiona.PersistenceProviders.NH
         {
             NHibernateUtil.Initialize(proxy);
         }
+
+        //public IQueryable<TEntity> QueryWithPath<TRelated>(Expression<Func<TEntity, IEnumerable<TRelated>>> relatedObjectSelector, params List<Expression<Func<TEntity, IEnumerable<TRelated>>>> relatedObjectSelectors)
+        //{
+        //    var q = UoW.Session.Query<TEntity>().FetchMany(relatedObjectSelector);
+        //    foreach (var item in relatedObjectSelectors)
+        //    {
+        //        q = q.ThenFetchMany<TRelated>(item);
+        //    }
+        //    return (UoW.Session.Query<TEntity>().FetchMany(relatedObjectSelector));
+        //}
 
         public void LoadIfNot(object proxy)
         {

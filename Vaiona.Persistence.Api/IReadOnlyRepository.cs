@@ -37,6 +37,7 @@ namespace Vaiona.Persistence.Api
         IQueryable<TEntity> Query(string expression);
         IQueryable<TEntity> Query(object criteria); // needs more work
 
+        //IQueryable<TEntity> Include<TRelated>(Expression<Func<TEntity, IEnumerable<TRelated>>> relatedObjectSelector);
         bool IsPropertyLoaded(object proxy, string propertyName);
         bool IsLoaded(object proxy);
         void Load(object proxy);

@@ -11,6 +11,7 @@ using NHibernate.Context;
 using System.Collections.Generic;
 using System.Linq;
 using Vaiona.Util.Cfg;
+using System.Diagnostics;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -24,10 +25,11 @@ namespace Vaiona.PersistenceProviders.NH
 
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
-        
+        bool showQueries;
         public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default", bool showQueries=false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
+            this.showQueries = showQueries;
 
             if (sessionFactory != null)
                 return;
@@ -60,7 +62,8 @@ namespace Vaiona.PersistenceProviders.NH
         public void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false)
         {
             // think of installing a module separately: export that module to DB, add entries to cfg., restart cfg and session factory, etc.
-            new SchemaExport(cfg).Execute(generateScript, executeAgainstTargetDB, justDrop);
+            var export = new SchemaExport(cfg);
+            export.Execute(generateScript, executeAgainstTargetDB, justDrop);
             foreach (var component in componentPostInstallationFiles)
             {
                 foreach (var file in component.Value)
@@ -75,6 +78,26 @@ namespace Vaiona.PersistenceProviders.NH
                     executePostInstallationScript(file);
                 }
             }           
+        }
+
+        public void UpdateSchema(bool generateScript = false, bool executeAgainstTargetDB = true)
+        {
+            var update = new SchemaUpdate(cfg);
+            update.Execute(generateScript, executeAgainstTargetDB);
+            foreach (var component in componentPostInstallationFiles)
+            {
+                foreach (var file in component.Value)
+                {
+                    executePostInstallationScript(file);
+                }
+            }
+            foreach (var module in modulePostInstallationFiles)
+            {
+                foreach (var file in module.Value)
+                {
+                    executePostInstallationScript(file);
+                }
+            }
         }
 
         private void executePostInstallationScript(FileInfo postInstallationScript)
@@ -154,8 +177,8 @@ namespace Vaiona.PersistenceProviders.NH
             foreach (var sessionFactory in getSessionFactories())
             {
                 var localFactory = sessionFactory;
-
-                NHibernateCurrentSessionProvider.Bind(new Lazy<ISession>(() => beginSession(localFactory)), sessionFactory);
+                var sessionInitilizer = new Lazy<ISession>(() => beginSession(localFactory));
+                NHibernateCurrentSessionProvider.Bind(sessionInitilizer, sessionFactory);
             }
         }
 
@@ -218,22 +241,20 @@ namespace Vaiona.PersistenceProviders.NH
             var sessionFactories = new List<ISessionFactory>() { sessionFactory };
 
             if (sessionFactories == null || !sessionFactories.Any())
-                throw new TypeLoadException("There should be at least one ISessionFactory registered");
+                throw new TypeLoadException("There should be at least one ISessionFactory registered.");
             return sessionFactories;
         }
 
-        private static ISession beginSession(ISessionFactory sessionFactory)
+        private ISession beginSession(ISessionFactory sessionFactory)
         {
-#if DEBUG
             var session = sessionFactory.OpenSession(cfg.Interceptor);
-#else
-            var session = sessionFactory.OpenSession();
-#endif
             session.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
+            if (showQueries)
+                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A Conversation is opened. ID: " + session.GetHashCode());
             return session;
         }
 
-        private static void endSession(ISession session, bool commitTransaction = false)
+        private void endSession(ISession session, bool commitTransaction = false)
         {
             try
             {
@@ -262,6 +283,8 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 if (session.IsOpen)
                     session.Close();
+                if (showQueries)
+                    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A Conversation is closed. ID: " + session.GetHashCode());
 
                 session.Dispose();
             }

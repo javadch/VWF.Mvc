@@ -11,6 +11,7 @@ namespace Vaiona.Persistence.Api
         object Factory { get; }
         void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default", bool showQueries = false);
         void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false);
+        void UpdateSchema(bool generateScript = false, bool executeAgainstTargetDB = true);
         void Start();
         void Shutdown();
         IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false

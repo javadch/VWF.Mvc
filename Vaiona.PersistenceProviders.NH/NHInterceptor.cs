@@ -4,12 +4,13 @@ using System.Linq;
 using System.Text;
 using NHibernate;
 using System.Diagnostics;
+using NHibernate.SqlCommand;
 
 namespace Vaiona.PersistenceProviders.NH
 {
     class NHInterceptor : EmptyInterceptor, IInterceptor
     {
-        NHibernate.SqlCommand.SqlString IInterceptor.OnPrepareStatement(NHibernate.SqlCommand.SqlString sql)
+        SqlString IInterceptor.OnPrepareStatement(SqlString sql)
         {
             Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + sql.ToString());
             //NHSQL.NHibernateSQL.Add(sql.ToString());
