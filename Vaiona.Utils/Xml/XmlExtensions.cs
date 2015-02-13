@@ -6,7 +6,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.IO;
 
-namespace Vaiona.Util.Xml
+namespace Vaiona.Utils.Xml
 {
     public static class XmlExtensions
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 
 namespace Vaiona.Persistence.Api
 {
@@ -15,6 +15,9 @@ namespace Vaiona.Persistence.Api
         void Start();
         void Shutdown();
         IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
+            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null);
+
+        IUnitOfWork CreateIsolatedUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null);
 
         object GetCurrentConversation();

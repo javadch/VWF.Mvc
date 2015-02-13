@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Vaiona.Util.String
+namespace Vaiona.Utils.String
 {
     public class CultureInvariantStringComparer : IEqualityComparer<string>
     {

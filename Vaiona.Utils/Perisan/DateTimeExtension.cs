@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Globalization;
 
-namespace Vaiona.Util.Persian
+namespace Vaiona.Utils.Persian
 {
     public static class DateTimeExtension
     {

@@ -146,15 +146,15 @@ namespace Vaiona.PersistenceProviders.NH
 
         private void disposeResources()
         {
-            if (autoCommit)
+            if (autoCommit & !Session.Transaction.WasCommitted)
                 this.Commit();
             else
                 this.Ignore();
             //CurrentSessionContext.Unbind(this.Session.SessionFactory);
-            //if (Session.IsOpen)
-            //    Session.Close();
+            if (Session.IsOpen)
+                Session.Close();
             //Session.Dispose();
-            //Session = null;
+            Session = null;
             //HttpContext.Current.Session.Remove("CurrentNHSession");
             // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
             BeforeCommit = null;

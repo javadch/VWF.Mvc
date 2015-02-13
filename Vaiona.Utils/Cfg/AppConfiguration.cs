@@ -5,9 +5,19 @@ using System.Text;
 using System.Configuration;
 using System.IO;
 using System.Web;
+using System.Globalization;
+using System.Threading;
+using System.Security.Principal;
+using System.Web.Security;
 
-namespace Vaiona.Util.Cfg
+namespace Vaiona.Utils.Cfg
 {
+    public class Constants
+    {
+        public static readonly string AnonymousUser = @"Anonymous";
+        public static readonly string EveryoneRole = "Everyone";
+    }
+
     // this class must hide the web or desktop config implementation. use VWF pattern
     public class AppConfiguration
     {
@@ -113,6 +123,27 @@ namespace Vaiona.Util.Cfg
                 return (path);
             }
         }
+
+        //public static string GetLoggerInfo(string logType)
+        //{
+        //    string loggerKey = logType + ".Logger";
+        //    string loggerInfo = ""; // the logger info is the FQN of the logger class, that is instantiated by the logger factory
+        //    try
+        //    {
+        //        loggerInfo = ConfigurationManager.AppSettings[loggerKey];
+        //    }
+        //    catch { loggerInfo = ""; }
+        //    if (string.IsNullOrWhiteSpace(loggerInfo)) // try the general logging info attached to the General.Logger
+        //    {
+        //        loggerKey = "General.Logger";
+        //        try
+        //        {
+        //            loggerInfo = ConfigurationManager.AppSettings[loggerKey];
+        //        }
+        //        catch { loggerInfo = ""; }
+        //    }
+        //    return loggerInfo;
+        //}
 
         private static string workspaceRootPath = string.Empty;
         public static string WorkspaceRootPath
@@ -280,6 +311,123 @@ namespace Vaiona.Util.Cfg
                 }
                 catch { return (false); }
             }
+        }
+
+        public static HttpContext HttpContext
+        {
+            get { return HttpContext.Current; }
+        }
+
+        public static Thread CurrentThread
+        {
+            get { return Thread.CurrentThread; }
+        }
+
+        public static CultureInfo UICulture // it can be done in cooperation with session management class
+        {
+            get { return Thread.CurrentThread.CurrentUICulture; }
+        }
+
+        public static CultureInfo Culture
+        {
+            get { return Thread.CurrentThread.CurrentCulture; }
+        }
+
+        public static DateTime UTCDateTime
+        {
+            get { return (DateTime.UtcNow); }
+        }
+
+        public static byte[] GetUTCAsBytes()
+        {
+            return (System.Text.Encoding.UTF8.GetBytes(AppConfiguration.UTCDateTime.ToBinary().ToString()));
+        }
+
+        public static DateTime DateTime
+        {
+            get { return (DateTime.Now); }
+        }
+
+        public static Uri CurrentRequestURL
+        {
+            get
+            {
+                try
+                {
+                    return (HttpContext.Current.Request.Url);
+                }
+                catch
+                {
+                    return new Uri("NotFound.htm");
+                }
+            }
+        }
+
+        public static IPrincipal User
+        {
+            // decide wether user must be authenticated or not
+            get
+            {
+                if (/*Environment.HttpContext.User.Identity != null &&*/ !AppConfiguration.HttpContext.User.Identity.IsAuthenticated)
+                {
+                    return (createUser(Constants.AnonymousUser, Constants.EveryoneRole));
+                }
+                else
+                    return (AppConfiguration.HttpContext.User);
+            }
+        }
+
+        public static bool TryGetCurrentUser(ref string userName)
+        {
+            userName = AppConfiguration.HttpContext.User.Identity.Name; // Thread.CurrentPrincipal.Identity.Name; 
+            return (Thread.CurrentPrincipal.Identity.IsAuthenticated); //Thread.CurrentPrincipal.Identity.IsAuthenticated
+        }
+
+        internal static IPrincipal createUser(string userName, string roleName)
+        {
+            IIdentity identity = new GenericIdentity(userName);
+            RolePrincipal p = new RolePrincipal(identity);
+            //string[] roles = new string[1]; // get it from the role provder, take into account site and portal id
+            //roles[0] = string.IsNullOrEmpty(roleName) ? Constants.GuestRole : roleName;
+            //return (new GenericPrincipal(identity, roles));
+            return (p);
+            //JApplication.CurrentHttpContext.User.Identity.IsAuthenticated = 
+
+        }
+
+        public static bool IsLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsPerformanceLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsPerformanceLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsDiagnosticLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsDiagnosticLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsTraceLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsTraceLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsExceptionLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsExceptionLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsDataLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsDataLoggingEnable"].ToString()); }
+        }
+
+        public static bool IsCustomLoggingEnable
+        {
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsCustomLoggingEnable"].ToString()); }
         }
     }
 }

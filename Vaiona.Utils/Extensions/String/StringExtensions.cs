@@ -6,11 +6,11 @@ using System.Text.RegularExpressions;
 
 namespace System
 {
-    public static class StringExtension
+    public static class StringExtensions
     {
         #region Default Rules
 
-        static StringExtension()
+        static StringExtensions()
         {
             AddPlural("$", "s");
             AddPlural("s$", "s");
@@ -194,7 +194,7 @@ namespace System
         }
 
         /// <summary>
-        /// Capitalize the first letter and do not tuch the rest, it is not like PascalCase!
+        /// Capitalize the first letter and do not touch the rest, it is not like PascalCase!
         /// </summary>
         /// <param name="word"></param>
         /// <returns></returns>
@@ -210,15 +210,15 @@ namespace System
 
         public static string Ordinalize(this string numberString)
         {
-            return Ordanize(int.Parse(numberString), numberString);
+            return Ordinalize(int.Parse(numberString), numberString);
         }
 
         public static string Ordinalize(this int number)
         {
-            return Ordanize(number, number.ToString());
+            return Ordinalize(number, number.ToString());
         }
 
-        private static string Ordanize(int number, string numberString)
+        private static string Ordinalize(int number, string numberString)
         {
             int nMod100 = number % 100;
 
