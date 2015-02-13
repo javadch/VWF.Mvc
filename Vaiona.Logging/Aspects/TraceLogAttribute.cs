@@ -14,12 +14,12 @@ namespace Vaiona.Logging.Aspects
     {
         public override void OnInvoke(MethodInterceptionArgs args)
         {
-            if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsTraceLoggingEnable)
+            if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCallLoggingEnable)
                 return;
             base.OnInvoke(args);
             /// if invocation of the original method encounters any exception, 
-            /// the remaining code will not execute, so there is no need to 
-            /// guard this logging from Exceptions, in contrast to performance or diagnostic loggings
+            /// the remaining code will not execute, hence no call is recorded.
+            /// if needed the method should be tagged with an ExceptionLogAttribute, too.
 
             MethodLogEntry mLog = new MethodLogEntry();
 

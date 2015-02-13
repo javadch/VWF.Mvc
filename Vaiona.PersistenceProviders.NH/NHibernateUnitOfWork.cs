@@ -151,10 +151,11 @@ namespace Vaiona.PersistenceProviders.NH
             else
                 this.Ignore();
             //CurrentSessionContext.Unbind(this.Session.SessionFactory);
-            if (Session.IsOpen)
-                Session.Close();
+            // Do not close the session, as it is usually shared between multiple units of work in a single HTTP request context
+            //if (Session.IsOpen)
+            //    Session.Close();
             //Session.Dispose();
-            Session = null;
+            Session = null; // dereference the pointer to the shared session object
             //HttpContext.Current.Session.Remove("CurrentNHSession");
             // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
             BeforeCommit = null;

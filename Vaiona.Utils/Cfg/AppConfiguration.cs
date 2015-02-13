@@ -174,7 +174,7 @@ namespace Vaiona.Utils.Cfg
                 DirectoryInfo di = new DirectoryInfo(AppRoot);
                 while (di.GetFiles("Web.config").Count() >= 1)
                     di = di.Parent;
-                for (int i = 0; i < level; i++)
+                for (int i = 0; i <= level; i++)
                 {
                     di = di.Parent;
                 }
@@ -410,9 +410,9 @@ namespace Vaiona.Utils.Cfg
             get { return bool.Parse(ConfigurationManager.AppSettings["IsDiagnosticLoggingEnable"].ToString()); }
         }
 
-        public static bool IsTraceLoggingEnable
+        public static bool IsCallLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsTraceLoggingEnable"].ToString()); }
+            get { return bool.Parse(ConfigurationManager.AppSettings["IsCallLoggingEnable"].ToString()); }
         }
 
         public static bool IsExceptionLoggingEnable
