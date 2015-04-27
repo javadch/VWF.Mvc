@@ -55,9 +55,9 @@
       <Project>{29A7BE0F-A17C-4AE8-8CA1-15FE4DD74129}</Project>
       <Name>Vaiona.IoC</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Vaiona.Util\Vaiona.Util.csproj">
+    <ProjectReference Include="..\Vaiona.Utils\Vaiona.Utils.csproj">
       <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
-      <Name>Vaiona.Util</Name>
+      <Name>Vaiona.Utils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

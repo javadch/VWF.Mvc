@@ -53,13 +53,13 @@
     <Compile Include="Unity\UnityPerSessionLifetimeManager.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Vaiona.Util\Vaiona.Util.csproj">
-      <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
-      <Name>Vaiona.Util</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <ProjectReference Include="..\Vaiona.Utils\Vaiona.Utils.csproj">
+      <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
+      <Name>Vaiona.Utils</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

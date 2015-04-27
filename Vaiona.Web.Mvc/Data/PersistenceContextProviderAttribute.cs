@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web.Mvc;
 using Vaiona.Persistence.Api;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 
 namespace Vaiona.Web.Mvc.Data
 {

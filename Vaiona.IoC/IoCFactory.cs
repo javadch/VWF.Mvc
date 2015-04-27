@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 using Vaiona.IoC.Unity;
 
 namespace Vaiona.IoC

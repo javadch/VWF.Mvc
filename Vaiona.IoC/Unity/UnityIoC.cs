@@ -39,6 +39,10 @@ namespace Vaiona.IoC.Unity
             return (container.Resolve(t));
         }
 
+        public bool IsRegistered(Type t, string name)
+        {
+            return container.IsRegistered(t, name);
+        }
         //public IEnumerable<object> ResolveAll(Type t)
         //{
         //    IEnumerable<object> objects = container.ResolveAll(t);
@@ -49,9 +53,24 @@ namespace Vaiona.IoC.Unity
         //    return (objects);
         //}
 
-        public object Resolve<T>()
+        //public object Resolve<T>()
+        //{
+        //    return (container.Resolve<T>());
+        //}
+
+        public T Resolve<T>()
         {
             return (container.Resolve<T>());
+        }
+
+        public T Resolve<T>(string name)
+        {
+            return (container.Resolve<T>(name));
+        }
+
+        public bool IsRegistered<T>(string name)
+        {
+            return container.IsRegistered<T>(name);
         }
 
         //public IEnumerable<T> ResolveAll<T>()

@@ -5,7 +5,7 @@ using NHibernate;
 using NHibernate.Context;
 using NHibernate.Engine;
 using System.Runtime.Remoting.Messaging;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -54,10 +54,15 @@ namespace Vaiona.PersistenceProviders.NH
         /// <param name="sessionFactory"></param>
         /// <returns></returns>
         public static ISession UnBind(ISessionFactory sessionFactory) {
+            if (sessionFactory == null)
+                return null;
             var map = GetCurrentFactoryMap();
+            if (!map.ContainsKey(sessionFactory))
+                return null;
             var sessionInitializer = map[sessionFactory];
             map[sessionFactory] = null;
-            if (sessionInitializer == null || !sessionInitializer.IsValueCreated) return null;
+            if (sessionInitializer == null || !sessionInitializer.IsValueCreated)
+                return null;
             return sessionInitializer.Value;
         }
 

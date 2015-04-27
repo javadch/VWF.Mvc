@@ -10,7 +10,7 @@ using Vaiona.Persistence.Api;
 using NHibernate.Context;
 using System.Collections.Generic;
 using System.Linq;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 using System.Diagnostics;
 
 namespace Vaiona.PersistenceProviders.NH
@@ -26,7 +26,7 @@ namespace Vaiona.PersistenceProviders.NH
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         bool showQueries;
-        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFoler = "Default", bool showQueries=false)
+        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries=false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
             this.showQueries = showQueries;
@@ -47,8 +47,8 @@ namespace Vaiona.PersistenceProviders.NH
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
-            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles);
-            registerMappings(cfg, fallbackFoler, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
+            registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles);
+            registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
@@ -159,6 +159,19 @@ namespace Vaiona.PersistenceProviders.NH
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
             ISession session = getSession();
+            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
+            u.BeforeCommit += beforeCommit;
+            u.AfterCommit += afterCommit;
+            u.BeforeIgnore += beforeIgnore;
+            u.AfterIgnore += afterIgnore;
+            return (u);
+        }
+
+        public IUnitOfWork CreateIsolatedUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
+            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
+        {
+            var localFactory = sessionFactory;
+            ISession session = beginSession(localFactory);
             NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
             u.BeforeCommit += beforeCommit;
             u.AfterCommit += afterCommit;

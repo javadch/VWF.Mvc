@@ -57,13 +57,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Vaiona.Util\Vaiona.Util.csproj">
-      <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
-      <Name>Vaiona.Util</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Vaiona.Persistence.Api\Vaiona.Persistence.Api.csproj">
       <Project>{640BF81D-354A-4BF0-85FC-F0AD587CF8A2}</Project>
       <Name>Vaiona.Persistence.Api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vaiona.Utils\Vaiona.Utils.csproj">
+      <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
+      <Name>Vaiona.Utils</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

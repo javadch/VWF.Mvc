@@ -6,7 +6,7 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using Vaiona.IoC;
 using Vaiona.Persistence.Api;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 using System.IO;
 using Vaiona.Web.Mvc.Data;
 

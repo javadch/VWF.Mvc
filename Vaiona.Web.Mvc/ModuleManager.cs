@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using Vaiona.Persistence.Api;
 using Vaiona.IoC;
-using Vaiona.Util.Cfg;
+using Vaiona.Utils.Cfg;
 using System.Linq;
 using System.Collections.Generic;
 using System.Web.Mvc;

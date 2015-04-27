@@ -8,9 +8,13 @@ namespace Vaiona.IoC
     public interface IoCContainer
     {
         object Resolve(Type t);
+        bool IsRegistered(Type t, string name);
         //IEnumerable<object> ResolveAll(Type t);
 
-        object Resolve<T>();
+        //object Resolve<T>();
+        T Resolve<T>();
+        T Resolve<T>(string name);
+        bool IsRegistered<T>(string name);
         //IEnumerable<T> ResolveAll<T>();
         
         void Teardown(object obj);
