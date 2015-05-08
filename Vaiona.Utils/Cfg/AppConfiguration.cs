@@ -425,9 +425,9 @@ namespace Vaiona.Utils.Cfg
             get { return bool.Parse(ConfigurationManager.AppSettings["IsDataLoggingEnable"].ToString()); }
         }
 
-        public static bool IsCustomLoggingEnable
-        {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsCustomLoggingEnable"].ToString()); }
-        }
+        //public static bool IsCustomLoggingEnable
+        //{
+        //    get { return bool.Parse(ConfigurationManager.AppSettings["IsCustomLoggingEnable"].ToString()); }
+        //}
     }
 }

@@ -41,6 +41,10 @@ namespace Vaiona.Logging.Aspects
 
             mLog.LogType = LogType.Exception;
             LoggerFactory.LogMethod(mLog);
+#if DEBUG
+            Debug.WriteLine(string.Format("Diagnose is called on {0}.{1} at {2}", mLog.ClassName, mLog.MethodName, mLog.UTCDate));
+#endif
+
         }
     }
 }

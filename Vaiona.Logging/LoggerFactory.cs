@@ -28,7 +28,7 @@ namespace Vaiona.Logging
             return IoC.IoCFactory.Container.Resolve<ILogger>();            
         }
 
-        private static void refineLogEntry(LogEntry logEntry)
+        private static LogEntry refineLogEntry(LogEntry logEntry)
         {
             logEntry.Environemt = string.Join(", ", logEntry.Environemt, string.Format("Server OS={0}, Server .NET={1}", Environment.OSVersion, Environment.Version));
             if (AppConfiguration.HttpContext != null && AppConfiguration.HttpContext.Request != null)
@@ -46,26 +46,11 @@ namespace Vaiona.Logging
 
             logEntry.ExtraInfo = string.Join(", ", logEntry.ExtraInfo, string.Format("SessionID={0}", AppConfiguration.HttpContext.Session.SessionID))
                                        .TrimStart(", ".ToCharArray());
+            return logEntry;
         }
 
-        delegate void CustomLogDelegate(CustomLogEntry logEntry);
-        public static void LogCustom(CustomLogEntry logEntry)
+        private static LogEntry prepareLogEntry(LogEntry logEntry)
         {
-            if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCustomLoggingEnable)
-                return;
-            ILogger logger = create(logEntry.LogType);
-            refineLogEntry(logEntry);
-            CustomLogDelegate dlgt = new CustomLogDelegate(logger.LogCustom);
-            IAsyncResult ar = dlgt.BeginInvoke(logEntry, null, null);
-        }
-
-        public static void LogCustom(string message)
-        {
-            if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCustomLoggingEnable)
-                return;
-            CustomLogEntry logEntry = new CustomLogEntry();
-            logEntry.LogType = LogType.Custom;
-            logEntry.Desription = message;
             logEntry.UTCDate = AppConfiguration.UTCDateTime;
             logEntry.CultureId = AppConfiguration.Culture.Name;
             string tempUser = string.Empty;
@@ -75,11 +60,35 @@ namespace Vaiona.Logging
             logEntry.RequestURL = AppConfiguration.CurrentRequestURL.ToString();
 
             // caller method information. indicates where the custom logging function were called
-            StackFrame frame = new StackFrame(1);
+            StackFrame frame = new StackFrame(2);
             logEntry.AssemblyName = frame.GetMethod().DeclaringType.Assembly.GetName().Name;//
             logEntry.AssemblyVersion = frame.GetMethod().DeclaringType.Assembly.GetName().Version.ToString();
             logEntry.ClassName = frame.GetMethod().DeclaringType.FullName;
             logEntry.MethodName = frame.GetMethod().Name.TrimStart("<".ToCharArray()).TrimEnd(">".ToCharArray()); // not obvious why the method name is wrapped in <>??
+
+            return logEntry;
+        }
+
+        delegate void CustomLogDelegate(CustomLogEntry logEntry);
+        public static void LogCustom(CustomLogEntry logEntry)
+        {
+            //if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCustomLoggingEnable)
+            //    return;
+            ILogger logger = create(logEntry.LogType);
+            logEntry = (CustomLogEntry)prepareLogEntry(logEntry);
+            logEntry = (CustomLogEntry)refineLogEntry(logEntry);
+            CustomLogDelegate dlgt = new CustomLogDelegate(logger.LogCustom);
+            IAsyncResult ar = dlgt.BeginInvoke(logEntry, null, null);
+        }
+
+        public static void LogCustom(string message)
+        {
+            //if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCustomLoggingEnable)
+            //    return;
+            CustomLogEntry logEntry = new CustomLogEntry();
+            logEntry.LogType = LogType.Custom;
+            logEntry.Desription = message;
+
             LogCustom(logEntry);
         }
 
@@ -87,7 +96,7 @@ namespace Vaiona.Logging
         public static void LogMethod(MethodLogEntry logEntry)
         {
             ILogger logger = create(logEntry.LogType);
-            refineLogEntry(logEntry);
+            logEntry = (MethodLogEntry)refineLogEntry(logEntry);
             MethodLogDelegate dlgt = new MethodLogDelegate(logger.LogMethod);
             IAsyncResult ar = dlgt.BeginInvoke(logEntry, null, null);
         }
@@ -96,23 +105,50 @@ namespace Vaiona.Logging
         public static void LogData(DataLogEntry logEntry) // subject to remove
         {
             ILogger logger = create(logEntry.LogType);
-            refineLogEntry(logEntry);
+            logEntry = (DataLogEntry)prepareLogEntry(logEntry);
+            logEntry = (DataLogEntry)refineLogEntry(logEntry);
+            logEntry.Desription = string.Format("Entity {0} of type '{1}' is in the '{2}' state.", logEntry.ObjectId, logEntry.ObjectType, logEntry.State);
             DataLogDelegate dlgt = new DataLogDelegate(logger.LogData);
             IAsyncResult ar = dlgt.BeginInvoke(logEntry, null, null);
         }
 
-        //public static void LogData(DataLogEntry logEntry)
-        //{
-        //    ILogger logger = create(logEntry.LogType);
-        //    refineLogEntry(logEntry);
-        //    logger.LogData(logEntry);
-        //}
+        public static void LogData(string objectId, string objectType, CrudState state)
+        {
+            DataLogEntry logEntry = new DataLogEntry()
+            {
+                LogType = LogType.Data,
+                ObjectId = objectId,
+                ObjectType = objectType,
+                State = state,
+            };
+            LogData(logEntry);
+        }
 
+        delegate void RelationLogDelegate(RelationLogEntry logEntry);
         public static void LogDataRelation(RelationLogEntry logEntry)
         {
             ILogger logger = create(logEntry.LogType);
-            refineLogEntry(logEntry);
+            logEntry = (RelationLogEntry)prepareLogEntry(logEntry);
+            logEntry = (RelationLogEntry)refineLogEntry(logEntry);
+            logEntry.Desription = string.Format("A relationship between entity {0} of type '{1}' and entity {2} of type '{3}' is {4}.", 
+            logEntry.SourceObjectId, logEntry.SourceObjectType, logEntry.DestinationObjectId, logEntry.DestinationObjectType, logEntry.State);
+            RelationLogDelegate dlgt = new RelationLogDelegate(logger.LogRelation);
+            IAsyncResult ar = dlgt.BeginInvoke(logEntry, null, null);
             logger.LogRelation(logEntry);
+        }
+
+        public static void LogDataRelation(string sourceObjectId, string sourceObjectType, string destinationObjectId, string destinationObjectType, CrudState state)
+        {
+            RelationLogEntry logEntry = new RelationLogEntry()
+            {
+                LogType = LogType.Data,
+                SourceObjectId = sourceObjectId,
+                SourceObjectType = sourceObjectType,
+                DestinationObjectId = destinationObjectId,
+                DestinationObjectType = destinationObjectType,
+                State = state,
+            };
+            LogDataRelation(logEntry);
         }
     }
 }

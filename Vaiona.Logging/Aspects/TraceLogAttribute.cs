@@ -5,6 +5,7 @@ using System.Text;
 using PostSharp.Aspects;
 using Vaiona.Utils.Cfg;
 using Vaiona.Entities.Logging;
+using System.Diagnostics;
 
 namespace Vaiona.Logging.Aspects
 {
@@ -39,6 +40,10 @@ namespace Vaiona.Logging.Aspects
 
             mLog.LogType = LogType.Call;
             LoggerFactory.LogMethod(mLog);
+#if DEBUG
+            Debug.WriteLine(string.Format("Diagnose is called on {0}.{1} at {2}", mLog.ClassName, mLog.MethodName, mLog.UTCDate));
+#endif
+
         }
     }
 }

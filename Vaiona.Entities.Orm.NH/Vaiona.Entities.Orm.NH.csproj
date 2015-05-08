@@ -47,6 +47,12 @@
     <Folder Include="Mappings\MsSql2008Dialect\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Mappings\Default\Logging\LogEntryEntity.RelationLog.hbm.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Mappings\Default\Logging\LogEntryEntity.DataLog.hbm.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Mappings\Default\Logging\LogEntryEntity.CustomLog.hbm.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

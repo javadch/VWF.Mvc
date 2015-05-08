@@ -12,7 +12,16 @@ namespace Vaiona.Entities.Logging
         Call,
         Exception,
         Data,
+        Relation,
         Custom
+    }
+
+    public enum CrudState
+    {
+        Created,
+        Read,
+        Updated,
+        Deleted
     }
 
     public abstract class LogEntry //: EnvironemntLogEntry
@@ -56,8 +65,8 @@ namespace Vaiona.Entities.Logging
         public virtual string ObjectId { get; set; } // Id of the data object that the method is working on
         public virtual string ObjectType { get; set; }
 
-        public virtual int GroupId { get; set; }
-        public virtual string State { get; set; } // CRUD
+        public virtual string GroupId { get; set; } // if this a part of a group operation, the group id can be set. like the transaction id, etc
+        public virtual CrudState State { get; set; } // CRUD
     }
 
     public class RelationLogEntry : LogEntry
@@ -68,7 +77,7 @@ namespace Vaiona.Entities.Logging
         public virtual string DestinationObjectId { get; set; }
         public virtual string DestinationObjectType { get; set; }
 
-        public virtual string TransactionId { get; set; }
-        public virtual string State { get; set; } // CRUD
+        public virtual string GroupId { get; set; }
+        public virtual CrudState State { get; set; } // CRUD
     }
 }

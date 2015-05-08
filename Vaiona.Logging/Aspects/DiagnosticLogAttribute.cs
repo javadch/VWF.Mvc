@@ -26,13 +26,13 @@ namespace Vaiona.Logging.Aspects
 
         public override void OnExit(MethodExecutionArgs args)
         {
+            var sw = (Stopwatch)args.MethodExecutionTag;
+            sw.Stop();
+
             if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsDiagnosticLoggingEnable)
                 return;
             if (args.Exception != null) // don't log if there is am exception in the call context. it is likely captured by an exception logger
                 return;
-
-            var sw = (Stopwatch)args.MethodExecutionTag;
-            sw.Stop();
 
             MethodLogEntry mLog = new MethodLogEntry();
 
@@ -69,16 +69,23 @@ namespace Vaiona.Logging.Aspects
                 mLog.ParameterValues = string.Join(", ", strArray);
             }
             catch (Exception ex) { }
-            mLog.ReturnType = args.ReturnValue.GetType().FullName;
+            mLog.ReturnType = args.ReturnValue != null ? args.ReturnValue.GetType().FullName: args.Method.GetType().Name;
             try
             {
-                if (args.ReturnValue.ToString().Length <= 255) // just to limit the size to comply with the DB
+                if (args.ReturnValue != null)
                 {
-                    mLog.ReturnValue = args.ReturnValue.ToString();//
+                    if (args.ReturnValue.ToString().Length <= 255) // just to limit the size to comply with the DB
+                    {
+                        mLog.ReturnValue = args.ReturnValue.ToString();//
+                    }
+                    else
+                    {
+                        mLog.ReturnValue = args.ReturnValue.ToString().Substring(0, 252) + "...";
+                    }
                 }
                 else
                 {
-                    mLog.ReturnValue = args.ReturnValue.ToString().Substring(0, 252) + "...";
+                    mLog.ReturnValue = string.Empty;
                 }
             }
             catch { }
@@ -87,6 +94,9 @@ namespace Vaiona.Logging.Aspects
 
             mLog.LogType = LogType.Diagnosis;
             LoggerFactory.LogMethod(mLog);
+#if DEBUG
+            Debug.WriteLine(string.Format("Diagnose is called on {0}.{1} at {2}", mLog.ClassName, mLog.MethodName, mLog.UTCDate));
+#endif
         }
     }
 }

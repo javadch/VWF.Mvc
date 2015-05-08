@@ -82,22 +82,40 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void UpdateSchema(bool generateScript = false, bool executeAgainstTargetDB = true)
         {
-            var update = new SchemaUpdate(cfg);
-            update.Execute(generateScript, executeAgainstTargetDB);
-            foreach (var component in componentPostInstallationFiles)
-            {
-                foreach (var file in component.Value)
-                {
-                    executePostInstallationScript(file);
-                }
-            }
-            foreach (var module in modulePostInstallationFiles)
-            {
-                foreach (var file in module.Value)
-                {
-                    executePostInstallationScript(file);
-                }
-            }
+             System.Action<string> updateExport = x => {
+                using (var file = new System.IO.FileStream(@"D:\temp\update.sql", System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write))
+                    using (var sw = new System.IO.StreamWriter(file)) {
+                        sw.Write(x);
+                        sw.Close();
+                    }
+            };
+             using (var session = sessionFactory.OpenSession())
+             {
+                 using (var trans = session.BeginTransaction())
+                 {
+                     var update = new SchemaUpdate(cfg);
+                     if (generateScript)
+                         update.Execute(updateExport, executeAgainstTargetDB);
+                     else
+                         update.Execute(generateScript, executeAgainstTargetDB);
+                     foreach (var component in componentPostInstallationFiles)
+                     {
+                         foreach (var file in component.Value)
+                         {
+                             executePostInstallationScript(file);
+                         }
+                     }
+                     foreach (var module in modulePostInstallationFiles)
+                     {
+                         foreach (var file in module.Value)
+                         {
+                             executePostInstallationScript(file);
+                         }
+                     }
+                     trans.Commit();
+                 }
+             }
+
         }
 
         private void executePostInstallationScript(FileInfo postInstallationScript)
