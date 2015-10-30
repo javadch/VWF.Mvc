@@ -37,6 +37,44 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+        public static string ApplicationName
+        {
+            get
+            {
+                try
+                {
+                    return (ConfigurationManager.AppSettings["ApplicationName"]);
+                }
+                catch { return (string.Empty); }
+            }
+        }
+
+        public static string ApplicationVersion
+        {
+            get
+            {
+                try
+                {
+                    return (ConfigurationManager.AppSettings["ApplicationVersion"]);
+                }
+                catch { return (string.Empty); }
+            }
+        }
+
+        public static string ApplicationInfo
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(ApplicationName))
+                {
+                    if (!string.IsNullOrWhiteSpace(ApplicationVersion))
+                        return (string.Format("{0} {1}", ApplicationName, ApplicationVersion));
+                    return (string.Format(ApplicationName));
+                }
+                return string.Empty;
+            }
+        }
+        
         public static string DefaultCulture
         {
             get

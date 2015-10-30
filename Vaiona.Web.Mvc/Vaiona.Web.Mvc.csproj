@@ -57,6 +57,7 @@
     <Compile Include="HtmlHelperExtensions.cs" />
     <Compile Include="LayoutManager.cs" />
     <Compile Include="Models\ActionModel.cs" />
+    <Compile Include="Models\PresentationModel.cs" />
     <Compile Include="Models\XsltViewModel.cs" />
     <Compile Include="ModuleManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
