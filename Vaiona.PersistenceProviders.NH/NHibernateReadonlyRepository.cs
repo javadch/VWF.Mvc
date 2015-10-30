@@ -14,9 +14,9 @@ namespace Vaiona.PersistenceProviders.NH
 {
     public class NHibernateReadonlyRepository<TEntity> : IReadOnlyRepository<TEntity> where TEntity : class
     {
-        protected NHibernateUnitOfWork UoW = null;
+        protected IUnitOfWork UoW = null;
 
-        internal NHibernateReadonlyRepository(NHibernateUnitOfWork uow)
+        internal NHibernateReadonlyRepository(IUnitOfWork uow)
         {
             this.UoW = uow;
         }
@@ -25,41 +25,55 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void Evict()
         {
-            UoW.Session.SessionFactory.Evict(typeof(TEntity));
+            if(UoW is NHibernateUnitOfWork)
+                ((NHibernateUnitOfWork)UoW).Session.SessionFactory.Evict(typeof(TEntity));
         }
 
         public void Evict(object id)
         {
-            UoW.Session.SessionFactory.Evict(typeof(TEntity), id);
+            if(UoW is NHibernateUnitOfWork)
+                ((NHibernateUnitOfWork)UoW).Session.SessionFactory.Evict(typeof(TEntity), id);
         }
 
         public void Evict(TEntity entity)
         {
-            UoW.Session.Evict(entity);
+            if (UoW is NHibernateUnitOfWork)
+                ((NHibernateUnitOfWork)UoW).Session.Evict(entity);
         }
 
         public TEntity Get(long id)
         {
             // NHibernateUtil.Initialize( paths
-            return (UoW.Session.Get<TEntity>(id)); 
+            if (UoW is NHibernateUnitOfWork)
+                return (((NHibernateUnitOfWork)UoW).Session.Get<TEntity>(id));
+            else if (UoW is NHibernateBulkUnitOfWork)
+                return (((NHibernateBulkUnitOfWork)UoW).Session.Get<TEntity>(id));
+            return default(TEntity);
         }
 
         public TEntity Reload(TEntity entity)
         {
-            Evict(entity);
-            IClassMetadata metaInfo = UoW.Session.SessionFactory.GetClassMetadata(typeof(TEntity));
-            if (metaInfo.HasIdentifierProperty)
+            if (UoW is NHibernateUnitOfWork)
             {
-                object idValue = entity.GetType().GetProperty(metaInfo.IdentifierPropertyName).GetValue(entity, null);
-                return (UoW.Session.Get<TEntity>(idValue)); 
+                Evict(entity);
+                var uow = ((NHibernateUnitOfWork)UoW);
+                IClassMetadata metaInfo = uow.Session.SessionFactory.GetClassMetadata(typeof(TEntity));
+                if (metaInfo.HasIdentifierProperty)
+                {
+                    object idValue = entity.GetType().GetProperty(metaInfo.IdentifierPropertyName).GetValue(entity, null);
+                    return (uow.Session.Get<TEntity>(idValue));
+                }
             }
+            // stateless sessions have no access to the session factory!
             return(default(TEntity));
         }
 
         public TEntity Refresh(Int64 id)
         {
             Evict(id);
-            return (UoW.Session.Load<TEntity>(id)); 
+            if (UoW is NHibernateUnitOfWork)
+                return (((NHibernateUnitOfWork)UoW).Session.Load<TEntity>(id));
+            return default(TEntity);
         }
 
         public IList<TEntity> Get(Expression<Func<TEntity, bool>> expression)
@@ -77,7 +91,11 @@ namespace Vaiona.PersistenceProviders.NH
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            IQuery query = UoW.Session.GetNamedQuery(namedQuery);
+            IQuery query = null;
+            if (UoW is NHibernateUnitOfWork)
+                query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+            else if (UoW is NHibernateBulkUnitOfWork)
+                query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
             if (parameters != null)
             {
                 foreach (var item in parameters)
@@ -88,12 +106,22 @@ namespace Vaiona.PersistenceProviders.NH
             return (query.List<TEntity>());
         }
 
+        /// <summary>
+        /// returns a list of un-typed objects.
+        /// </summary>
+        /// <param name="namedQuery">Name of the query to be retrieved from the mapping files</param>
+        /// <param name="parameters">Parameter values to be passed to the query</param>
+        /// <returns></returns>
         public IList Get2(string namedQuery, Dictionary<string, object> parameters)
         {
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            IQuery query = UoW.Session.GetNamedQuery(namedQuery);
+            IQuery query = null;
+            if (UoW is NHibernateUnitOfWork)
+                query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+            else if (UoW is NHibernateBulkUnitOfWork)
+                query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
             if (parameters != null)
             {
                 foreach (var item in parameters)
@@ -112,11 +140,18 @@ namespace Vaiona.PersistenceProviders.NH
             IQuery query = null;
             if (isNativeOrORM == false) // ORM native query: like HQL
             {
-                query = UoW.Session.CreateQuery(queryString);
+                if (UoW is NHibernateUnitOfWork)
+                    query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
             }
             else // Database native query
             {
-                query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                if (UoW is NHibernateUnitOfWork)
+                    query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
             }
             if (parameters != null)
             {
@@ -135,7 +170,12 @@ namespace Vaiona.PersistenceProviders.NH
 
         public IQueryable<TEntity> Query()
         {
-            return (UoW.Session.Query<TEntity>());
+            //return (UoW.Session.Query<TEntity>());
+            if (UoW is NHibernateUnitOfWork)
+                return (((NHibernateUnitOfWork)UoW).Session.Query<TEntity>());
+            else if (UoW is NHibernateBulkUnitOfWork)
+                return (((NHibernateBulkUnitOfWork)UoW).Session.Query<TEntity>());
+            return null;
         }
 
         public IQueryable<TEntity> Query(Expression<Func<TEntity, bool>> expression)

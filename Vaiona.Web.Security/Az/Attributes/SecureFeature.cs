@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Web.Mvc;
-using Vaiona.Web.Security.Az.Parser;
 using System.Configuration;
-using NHibernate;
 using System.Runtime.Caching;
-using NHibernate.Linq;
 using System.Web.SessionState;
 using System.Web;
-using System.Security.Principal;
+using System.Web.Mvc;
 using Vaiona.IoC;
 using Vaiona.Entities.Security;
 using Vaiona.Persistence.Api;

@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.IoC", "Vaiona.IoC\Vaiona.IoC.csproj", "{29A7BE0F-A17C-4AE8-8CA1-15FE4DD74129}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.Core", "Vaiona.Core\Vaiona.Core.csproj", "{B446C14F-9DF1-4C3C-A634-E3ADDD05C48A}"

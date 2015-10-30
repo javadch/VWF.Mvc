@@ -198,6 +198,18 @@ namespace Vaiona.PersistenceProviders.NH
             return (u);
         }
 
+        public IUnitOfWork CreateBulkUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
+            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
+        {
+            IStatelessSession session = sessionFactory.OpenStatelessSession();
+            NHibernateBulkUnitOfWork u = new NHibernateBulkUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
+            u.BeforeCommit += beforeCommit;
+            u.AfterCommit += afterCommit;
+            u.BeforeIgnore += beforeIgnore;
+            u.AfterIgnore += afterIgnore;
+            return (u);
+        }
+
         public object GetCurrentConversation()
         {
             return(getSession());
