@@ -29,6 +29,20 @@ namespace Vaiona.Persistence.Api
             return (uow);
         }
 
+        public static IUnitOfWork GetBulkUnitOfWork(this object obj)
+        {
+            IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
+            IUnitOfWork uow = persistenceManager.CreateBulkUnitOfWork(false, true, false);
+            return (uow);
+        }
+
+        public static IUnitOfWork GetIsolatedUnitOfWork(this object obj)
+        {
+            IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
+            IUnitOfWork uow = persistenceManager.CreateIsolatedUnitOfWork(false, true, false);
+            return (uow);
+        }
+
         public static IUnitOfWork GetMultipleCommitUnitOfWork(this object obj)
         {
             IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;

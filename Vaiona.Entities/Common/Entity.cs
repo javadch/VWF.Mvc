@@ -57,7 +57,7 @@ namespace Vaiona.Entities.Common
         /// No need to override these functions, the base one performs the task for normal cases
         /// If you have a very special case or the performance of the generic one is not good, then override the methods
         /// </summary>
-        public virtual void Dematerialize()
+        public virtual void Dematerialize(bool includeChildren=true)
         {
             //XmlVariableValues = (XmlDocument)transformer.ExportTo(VariableValues, "VariableValues", 1); sample
             //XmlAmendments = (XmlDocument)transformer.ExportTo(Amendments, "Amendments", 1);
@@ -90,7 +90,7 @@ namespace Vaiona.Entities.Common
         /// No need to override these functions, the base one performs the task for normal cases
         /// If you have a very special case or the performance of the generic one is not good, then override the methods
         /// </summary>
-        public virtual void Materialize()
+        public virtual void Materialize(bool includeChildren=true)
         {
             IObjectTransfromer transformer = new XmlObjectTransformer();
             //VariableValues = transformer.ImportFrom<List<VariableValue>>(XmlVariableValues, 1, null);

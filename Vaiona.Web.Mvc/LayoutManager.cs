@@ -88,11 +88,14 @@ namespace Vaiona.Web.Mvc
             {
                 XElement contentProvider = contentProviders[i];
                 object parameters = null;
-                try
+                if (parametersList != null && parametersList[i] != null)
                 {
-                    parameters = parametersList[i];
+                    try
+                    {
+                        parameters = parametersList[i];
+                    }
+                    catch { }
                 }
-                catch { }
                 ActionModel actionModel = new ActionModel()
                 {
                     Type = contentProvider.Attribute("Type").Value,

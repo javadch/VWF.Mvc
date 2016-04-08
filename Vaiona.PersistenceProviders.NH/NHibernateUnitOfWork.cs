@@ -11,22 +11,31 @@ namespace Vaiona.PersistenceProviders.NH
 {
     public class NHibernateUnitOfWork: IUnitOfWork
     {
-        internal ISession Session = null;
+        //internal ISession Session = null;
         private bool autoCommit = false;
         private bool throwExceptionOnError = true;
         private bool allowMultipleCommit = true;
+        internal Conversation Conversation = null;
 
         public IPersistenceManager PersistenceManager { get; internal set; }
-        internal NHibernateUnitOfWork(NHibernatePersistenceManager persistenceManager, ISession session, bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false)
+        internal NHibernateUnitOfWork(NHibernatePersistenceManager persistenceManager, Conversation conversation, bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false)
         {
             this.PersistenceManager = persistenceManager;
             this.autoCommit = autoCommit;
             this.throwExceptionOnError = throwExceptionOnError;
             this.allowMultipleCommit = allowMultipleCommit;
-            this.Session = session;
-            this.Session.BeginTransaction();
+            this.Conversation = conversation;
+            this.Conversation.Start(this);
+            //this.Session = this.Conversation.GetSession();
         }
 
+        internal ISession Session
+        {
+            get
+            {
+                return this.Conversation.GetSession();
+            }
+        }
         public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>() where TEntity : class
         {
             IReadOnlyRepository<TEntity> repo = new NHibernateReadonlyRepository<TEntity>(this);
@@ -39,11 +48,10 @@ namespace Vaiona.PersistenceProviders.NH
             return (repo);
         }
 
-        public void ClearCache()
+        public void ClearCache(bool applyChanages = true)
         {
-            Session.Clear();
+            this.Conversation.Clear(applyChanages);
         }
-
 
         public void Commit()
         {
@@ -58,9 +66,9 @@ namespace Vaiona.PersistenceProviders.NH
                 if (Session.Transaction.WasCommitted)
                 {
                     // log the changes detected in previous steps
+                    if (AfterCommit != null)
+                        AfterCommit(this, EventArgs.Empty);
                 }
-                if (AfterCommit != null)
-                    AfterCommit(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -70,12 +78,8 @@ namespace Vaiona.PersistenceProviders.NH
             }
             if (allowMultipleCommit && !this.Session.Transaction.IsActive)
             {
-                this.Session.Transaction.Begin();
+                this.Conversation.Restart(this);
             }
-            //else
-            //{
-            //    Session.Close();
-            //}
         }
 
         //public void CommitAndContinue()
@@ -93,11 +97,11 @@ namespace Vaiona.PersistenceProviders.NH
                     if (BeforeIgnore != null)
                         BeforeIgnore(this, EventArgs.Empty);
                     Session.Transaction.Rollback();
-                    if (AfterIgnore != null)
-                        AfterIgnore(this, EventArgs.Empty);
                     if (Session.Transaction.WasRolledBack)
                     {
                         // log
+                        if (AfterIgnore != null)
+                            AfterIgnore(this, EventArgs.Empty);
                     }
                 }
             }
@@ -108,7 +112,7 @@ namespace Vaiona.PersistenceProviders.NH
             }
             if (allowMultipleCommit && !this.Session.Transaction.IsActive)
             {
-                this.Session.Transaction.Begin();
+                this.Conversation.Restart(this);
             }
         }
 
@@ -124,6 +128,11 @@ namespace Vaiona.PersistenceProviders.NH
             Dispose(false);
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
         protected virtual void Dispose(bool disposing)
         {
             // If you need thread safety, use a lock around these  
@@ -137,13 +146,6 @@ namespace Vaiona.PersistenceProviders.NH
                 }
             }
         }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         private void disposeResources()
         {
             if (autoCommit & !Session.Transaction.WasCommitted)
@@ -155,7 +157,9 @@ namespace Vaiona.PersistenceProviders.NH
             //if (Session.IsOpen)
             //    Session.Close();
             //Session.Dispose();
-            Session = null; // dereference the pointer to the shared session object
+            this.Conversation.End(this);
+            this.Conversation = null;
+            //Session = null; // dereference the pointer to the shared session object
             //HttpContext.Current.Session.Remove("CurrentNHSession");
             // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
             BeforeCommit = null;

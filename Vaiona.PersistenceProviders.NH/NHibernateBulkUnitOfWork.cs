@@ -24,7 +24,7 @@ namespace Vaiona.PersistenceProviders.NH
             this.throwExceptionOnError = throwExceptionOnError;
             this.allowMultipleCommit = allowMultipleCommit;
             this.Session = session;
-            this.Session.BeginTransaction();
+            this.Session.Transaction.Begin();
         }
 
         public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>() where TEntity : class
@@ -39,7 +39,7 @@ namespace Vaiona.PersistenceProviders.NH
             return (repo);
         }
 
-        public void ClearCache()
+        public void ClearCache(bool applyChanges=true)
         {
             //Session.
         }
@@ -58,9 +58,9 @@ namespace Vaiona.PersistenceProviders.NH
                 if (Session.Transaction.WasCommitted)
                 {
                     // log the changes detected in previous steps
+                    if (AfterCommit != null)
+                        AfterCommit(this, EventArgs.Empty);
                 }
-                if (AfterCommit != null)
-                    AfterCommit(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -93,11 +93,11 @@ namespace Vaiona.PersistenceProviders.NH
                     if (BeforeIgnore != null)
                         BeforeIgnore(this, EventArgs.Empty);
                     Session.Transaction.Rollback();
-                    if (AfterIgnore != null)
-                        AfterIgnore(this, EventArgs.Empty);
                     if (Session.Transaction.WasRolledBack)
                     {
                         // log
+                        if (AfterIgnore != null)
+                            AfterIgnore(this, EventArgs.Empty);
                     }
                 }
             }

@@ -9,7 +9,8 @@ using Vaiona.Utils.Cfg;
 namespace Vaiona.Web.Mvc.Data
 {
     /// <summary>
-    /// Using this class is recommended just in MVC applications. in case the usage of SessionPerRequestModule should be avoided by removing/ commenting it in the web.config 
+    /// Using this class is recommended just in MVC applications. in case the usage of SessionPerRequestModule should be avoided
+    /// by removing/ commenting it in the web.config 
     /// Enabling this class can happen at the global.asax application start method by RegisterGlobalFilters
     /// issue: the pManager object should be kept between OnActionExecuted and OnResultExecuted or OnException
     /// <example>
@@ -41,6 +42,7 @@ namespace Vaiona.Web.Mvc.Data
             // this mechanism does not support conversation per web session! if that scenario is needed the right way is not move StartConversation and Shutdown/ EndConversation methods
             // to Session_Start and Session_End respectively. The scenario is not tested, though!
             pManager.StartConversation();
+            base.OnActionExecuting(filterContext);
         }
 
         public override void OnActionExecuted(ActionExecutedContext filterContext)
@@ -50,15 +52,18 @@ namespace Vaiona.Web.Mvc.Data
             if (AppConfiguration.AutoCommitTransactions)
                 pManager.EndConversation();
             else
-                pManager.ShutdownConversation();                        
+                pManager.ShutdownConversation();
+            base.OnActionExecuted(filterContext);
         }
 
         public override void OnResultExecuted(ResultExecutedContext filterContext)
         {
+            base.OnResultExecuted(filterContext);
         }
 
         public override void OnResultExecuting(ResultExecutingContext filterContext)
         {
+            base.OnResultExecuting(filterContext);
         }
 
         public void OnException(ExceptionContext filterContext)

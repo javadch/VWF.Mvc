@@ -26,7 +26,7 @@ namespace Vaiona.PersistenceProviders.NH
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         bool showQueries;
-        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries=false)
+        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries = false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
             this.showQueries = showQueries;
@@ -38,11 +38,11 @@ namespace Vaiona.PersistenceProviders.NH
             string configFileFullPath = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Db", "Settings", configFileName);
             cfg = new Configuration();
             cfg.Configure(configFileFullPath);
-            if(showQueries)
+            if (showQueries)
                 cfg.SetInterceptor(new NHInterceptor());
 
-            //  Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass). This way the sessionFactory.GetCurrentSession
-            // will call the CurrentSession method of this class.
+            // Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass).
+            // This way the sessionFactory.GetCurrentSession will call the CurrentSession method of this class.
             cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateCurrentSessionProvider).AssemblyQualifiedName;
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
@@ -55,7 +55,6 @@ namespace Vaiona.PersistenceProviders.NH
                 cfg.SetProperty(NHibernate.Cfg.Environment.ConnectionString, connectionString);
                 //cfg.SetProperty(NHibernate.Cfg.Environment.ConnectionString, Util.Decrypt(connectionString));
             }
-
             Contract.Ensures(cfg != null);
         }
 
@@ -77,44 +76,44 @@ namespace Vaiona.PersistenceProviders.NH
                 {
                     executePostInstallationScript(file);
                 }
-            }           
+            }
         }
 
         public void UpdateSchema(bool generateScript = false, bool executeAgainstTargetDB = true)
         {
-             System.Action<string> updateExport = x => {
+            System.Action<string> updateExport = x => {
                 using (var file = new System.IO.FileStream(@"D:\temp\update.sql", System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write))
-                    using (var sw = new System.IO.StreamWriter(file)) {
-                        sw.Write(x);
-                        sw.Close();
-                    }
+                using (var sw = new System.IO.StreamWriter(file)) {
+                    sw.Write(x);
+                    sw.Close();
+                }
             };
-             using (var session = sessionFactory.OpenSession())
-             {
-                 using (var trans = session.BeginTransaction())
-                 {
-                     var update = new SchemaUpdate(cfg);
-                     if (generateScript)
-                         update.Execute(updateExport, executeAgainstTargetDB);
-                     else
-                         update.Execute(generateScript, executeAgainstTargetDB);
-                     foreach (var component in componentPostInstallationFiles)
-                     {
-                         foreach (var file in component.Value)
-                         {
-                             executePostInstallationScript(file);
-                         }
-                     }
-                     foreach (var module in modulePostInstallationFiles)
-                     {
-                         foreach (var file in module.Value)
-                         {
-                             executePostInstallationScript(file);
-                         }
-                     }
-                     trans.Commit();
-                 }
-             }
+            using (var session = sessionFactory.OpenSession())
+            {
+                using (var trans = session.BeginTransaction())
+                {
+                    var update = new SchemaUpdate(cfg);
+                    if (generateScript)
+                        update.Execute(updateExport, executeAgainstTargetDB);
+                    else
+                        update.Execute(generateScript, executeAgainstTargetDB);
+                    foreach (var component in componentPostInstallationFiles)
+                    {
+                        foreach (var file in component.Value)
+                        {
+                            executePostInstallationScript(file);
+                        }
+                    }
+                    foreach (var module in modulePostInstallationFiles)
+                    {
+                        foreach (var file in module.Value)
+                        {
+                            executePostInstallationScript(file);
+                        }
+                    }
+                    trans.Commit();
+                }
+            }
 
         }
 
@@ -152,7 +151,7 @@ namespace Vaiona.PersistenceProviders.NH
                 this.Shutdown();
             }
         }
-        
+
         public void Start()
         {
             // may need locking for concurrent calls!
@@ -177,7 +176,8 @@ namespace Vaiona.PersistenceProviders.NH
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
             ISession session = getSession();
-            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
+            Conversation cnv = new Conversation(session, sessionFactory, cfg, autoCommit, AppConfiguration.ShowQueries);
+            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, cnv, autoCommit, throwExceptionOnError, allowMultipleCommit);
             u.BeforeCommit += beforeCommit;
             u.AfterCommit += afterCommit;
             u.BeforeIgnore += beforeIgnore;
@@ -188,9 +188,10 @@ namespace Vaiona.PersistenceProviders.NH
         public IUnitOfWork CreateIsolatedUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
             , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
-            var localFactory = sessionFactory;
-            ISession session = beginSession(localFactory);
-            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
+            //var localFactory = sessionFactory;
+            //ISession session = beginSession(localFactory);
+            Conversation cnv = new Conversation(sessionFactory, cfg, autoCommit, AppConfiguration.ShowQueries);
+            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, cnv, autoCommit, throwExceptionOnError, allowMultipleCommit);
             u.BeforeCommit += beforeCommit;
             u.AfterCommit += afterCommit;
             u.BeforeIgnore += beforeIgnore;
@@ -212,7 +213,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public object GetCurrentConversation()
         {
-            return(getSession());
+            return (getSession());
         }
 
         public void StartConversation()
@@ -220,7 +221,7 @@ namespace Vaiona.PersistenceProviders.NH
             foreach (var sessionFactory in getSessionFactories())
             {
                 var localFactory = sessionFactory;
-                var sessionInitilizer = new Lazy<ISession>(() => beginSession(localFactory));
+                var sessionInitilizer = new Lazy<ISession>(() => beginSession(localFactory));                
                 NHibernateCurrentSessionProvider.Bind(sessionInitilizer, sessionFactory);
             }
         }
@@ -229,6 +230,7 @@ namespace Vaiona.PersistenceProviders.NH
         {
             foreach (var sessionfactory in getSessionFactories())
             {
+                //var lazyConversation = new Lazy<Conversation>(() => new Conversation(localFactory, cfg, false, true));
                 var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
                 if (session == null) continue;
                 endSession(session, false);
@@ -244,7 +246,6 @@ namespace Vaiona.PersistenceProviders.NH
                 endSession(session, true);
             }
         }
-
         public void EndContext()
         {
             foreach (var sessionfactory in getSessionFactories())
@@ -255,6 +256,23 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
+        public int PreferredPushSize
+        {
+            get
+            {
+                int value = 0;
+                if (int.TryParse(GetProperty("adonet.batch_size"), out value))
+                    return value;
+                return 2400; // default value
+            }
+        }
+
+        public string GetProperty(string propertyName)
+        {
+            //if (propertyName.ToLower().Equals("default_batch_size"))
+            //    return "2400";
+            return cfg.GetProperty(propertyName);
+        }
         private ISession getSession()
         {
             ISession session = null;
@@ -291,9 +309,9 @@ namespace Vaiona.PersistenceProviders.NH
         private ISession beginSession(ISessionFactory sessionFactory)
         {
             var session = sessionFactory.OpenSession(cfg.Interceptor);
-            session.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
+            session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             if (showQueries)
-                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A Conversation is opened. ID: " + session.GetHashCode());
+                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + session.GetHashCode());
             return session;
         }
 
@@ -327,9 +345,10 @@ namespace Vaiona.PersistenceProviders.NH
                 if (session.IsOpen)
                     session.Close();
                 if (showQueries)
-                    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A Conversation is closed. ID: " + session.GetHashCode());
-
+                    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
+                Conversation.Dereference(session);
                 session.Dispose();
+                GC.Collect();
             }
         }
 
