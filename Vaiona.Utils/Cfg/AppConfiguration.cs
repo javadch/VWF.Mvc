@@ -303,6 +303,18 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+        public static bool CacheQueryResults
+        {
+            get
+            {
+                try
+                {
+                    return (bool.Parse(ConfigurationManager.AppSettings["CacheQueryResults"]));
+                }
+                catch { return (false); }
+            }
+        }
+
         public static string ThemesPath
         {
             get

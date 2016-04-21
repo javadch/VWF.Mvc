@@ -40,7 +40,7 @@ namespace Vaiona.Web.Mvc
                 MvcHtmlString htmlError = new MvcHtmlString("");
                 if (AppConfiguration.ThrowErrorWhenParialContentNotFound)
                 {
-                    htmlError = new MvcHtmlString(string.Format("No content for key '{0}' is found.", contentKey));
+                    htmlError = new MvcHtmlString(string.Format("No content for key '{0}' was found.", contentKey));
                 }
                 return (htmlError);
             }
@@ -73,7 +73,7 @@ namespace Vaiona.Web.Mvc
 
             if (mapItem == null)
             {
-                throw new Exception(string.Format("Error: No Mapping item matches the provided key: {0}", contentKey));
+                throw new Exception(string.Format("Error: No Mapping item matched the provided key: {0}", contentKey));
                 //return (new MvcHtmlString("Error"));//   return an error message
             }
             return (mapItem);

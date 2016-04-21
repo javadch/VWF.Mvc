@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Vaiona.Persistence.Api;
+using Vaiona.Utils.Cfg;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -74,8 +75,11 @@ namespace Vaiona.PersistenceProviders.NH
             }
             // if uow is already there, its a wrong call pattern! a unit of work is trying to start the conversation more than once!!
             registerUnit(session, uow);
-            session.CacheMode = CacheMode.Ignore;
-            if(!session.Transaction.IsActive)
+            if (!AppConfiguration.CacheQueryResults)
+                session.CacheMode = CacheMode.Ignore;
+            else
+                session.CacheMode = CacheMode.Normal;
+            if (!session.Transaction.IsActive)
                 session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             if (showQueries)
                 Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + session.GetHashCode());

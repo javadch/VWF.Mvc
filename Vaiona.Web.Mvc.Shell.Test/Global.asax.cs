@@ -20,7 +20,7 @@ namespace Vaiona.Web.Mvc.Shell.Test
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
             filters.Add(new HandleErrorAttribute());
-            filters.Add(new PersistenceContextProviderAttribute());
+            filters.Add(new PersistenceContextProviderFilterAttribute());
         }
 
         public static void RegisterRoutes(RouteCollection routes)

@@ -22,11 +22,11 @@ namespace Vaiona.Web.Mvc.Data
     /// </code>
     /// </example>
     /// </summary>
-    public class PersistenceContextProviderAttribute : ActionFilterAttribute, IExceptionFilter//, IActionFilter, IResultFilter
+    public class PersistenceContextProviderFilterAttribute : ActionFilterAttribute, IExceptionFilter//, IActionFilter, IResultFilter
     {
         IPersistenceManager pManager = null;
 
-        public PersistenceContextProviderAttribute()
+        public PersistenceContextProviderFilterAttribute()
         {
             pManager = PersistenceFactory.GetPersistenceManager();
         }
