@@ -7,6 +7,7 @@ using Vaiona.Web.Mvc.Data;
 using Vaiona.Entities.Logging;
 using Vaiona.Logging;
 using Vaiona.Logging.Aspects;
+using Vaiona.MultiTenancy.Api;
 
 namespace Vaiona.Web.Mvc.Shell.Test.Controllers
 {
@@ -16,6 +17,7 @@ namespace Vaiona.Web.Mvc.Shell.Test.Controllers
         public ActionResult Index()
         {
             ViewBag.Message = "Welcome to ASP.NET MVC!";
+            ITenantRegistrar tenantRegistrar = MultiTenantFactory.GetTenantRegistrar();
             return View();
         }
 

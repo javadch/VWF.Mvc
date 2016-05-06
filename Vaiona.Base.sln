@@ -29,6 +29,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.Utils", "Vaiona.Util
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.Logging", "Vaiona.Logging\Vaiona.Logging.csproj", "{E8B37581-1CAC-463D-903B-B4BEE8B2B0E3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Multi Tenancy", "Multi Tenancy", "{3F037599-0CDD-48B5-9C5F-112529C0F36B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.MultiTenancy.Api", "Vaiona.MultiTenancy.Api\Vaiona.MultiTenancy.Api.csproj", "{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaiona.MultiTenancy.Services", "Vaiona.MultiTenancy.Services\Vaiona.MultiTenancy.Services.csproj", "{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,9 +93,21 @@ Global
 		{E8B37581-1CAC-463D-903B-B4BEE8B2B0E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E8B37581-1CAC-463D-903B-B4BEE8B2B0E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E8B37581-1CAC-463D-903B-B4BEE8B2B0E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BCCD3D7B-8A50-4FA2-B9D3-2CB31BEA60B3} = {3F037599-0CDD-48B5-9C5F-112529C0F36B}
+		{4639D130-E0AA-4AEF-B9BD-BEF6AD99DBAF} = {3F037599-0CDD-48B5-9C5F-112529C0F36B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		EnterpriseLibraryConfigurationToolBinariesPath = packages\Unity.2.1.505.0\lib\NET35
