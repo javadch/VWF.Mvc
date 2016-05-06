@@ -303,51 +303,83 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+        private static bool? cacheQueryResults = null;
+        /// <summary>
+        /// This property is accessed fequently, to reduce the web.config access, it uses a chached field.
+        /// </summary>
         public static bool CacheQueryResults
         {
             get
             {
+                if (cacheQueryResults.HasValue)
+                    return cacheQueryResults.Value;
                 try
-                {
-                    return (bool.Parse(ConfigurationManager.AppSettings["CacheQueryResults"]));
+                {                    
+                    string s = ConfigurationManager.AppSettings["CacheQueryResults"];
+                    if (string.IsNullOrEmpty(s))
+                        cacheQueryResults = false;
+                    else
+                        cacheQueryResults = bool.Parse(s);
                 }
-                catch { return (false); }
+                catch { cacheQueryResults = false; }
+                return cacheQueryResults.Value;
             }
         }
 
+        private static string themesPath;
         public static string ThemesPath
         {
             get
             {
+                if (!string.IsNullOrEmpty(themesPath))
+                    return themesPath;
                 try
                 {
-                    return (ConfigurationManager.AppSettings["ThemesPath"]);
+                    // check if this is not the default tenant, use ~/tenants/<tenantId>/Themes
+                    themesPath = ConfigurationManager.AppSettings["ThemesPath"];
+                    if (string.IsNullOrEmpty(themesPath))
+                        themesPath = "~/Themes";
                 }
-                catch { return ("~/Themes"); }
+                catch { themesPath = "~/Themes"; }
+                return themesPath;
             }
         }
 
+        private static string defaultThemeName;
         public static string DefaultThemeName
         {
             get
             {
+                if (!string.IsNullOrEmpty(defaultThemeName))
+                    return defaultThemeName;
                 try
                 {
-                    return (ConfigurationManager.AppSettings["DefaultThemeName"]);
+                    // check if this is not the default tenant, use ~/tenants/<tenantId>/Themes
+                    defaultThemeName = ConfigurationManager.AppSettings["DefaultThemeName"];
+                    if (string.IsNullOrEmpty(defaultThemeName))
+                        defaultThemeName = "Default";
                 }
-                catch { return ("Default"); }
+                catch { defaultThemeName = "Default"; }
+                return defaultThemeName;
             }
         }
 
+        private static string activeLayoutName;
         public static string ActiveLayoutName
         {
             get
             {
+                if (!string.IsNullOrEmpty(activeLayoutName))
+                    return activeLayoutName;
                 try
                 {
-                    return (ConfigurationManager.AppSettings["ActiveLayoutName"]);
+                    // check if this is not the default tenant, use ~/tenants/<tenantId>/Themes
+                    activeLayoutName = ConfigurationManager.AppSettings["ActiveLayoutName"];
+                    if (string.IsNullOrEmpty(activeLayoutName))
+                        activeLayoutName = "_Layout";
                 }
-                catch { return ("_Layout"); }
+                catch { activeLayoutName = "_Layout"; }
+                return activeLayoutName;
             }
         }
 
@@ -445,39 +477,128 @@ namespace Vaiona.Utils.Cfg
 
         }
 
+        private static bool? isLoggingEnable = null;
         public static bool IsLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsLoggingEnable"].ToString()); }
+            get
+            {
+                if (isLoggingEnable.HasValue)
+                    return isLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isLoggingEnable = false;
+                    else
+                        isLoggingEnable = bool.Parse(s);
+                }
+                catch { isLoggingEnable = false; }
+                return isLoggingEnable.Value;
+            }
         }
 
+        private static bool? isPerformanceLoggingEnable = null;
         public static bool IsPerformanceLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsPerformanceLoggingEnable"].ToString()); }
+            get
+            {
+                if (isPerformanceLoggingEnable.HasValue)
+                    return isPerformanceLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsPerformanceLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isPerformanceLoggingEnable = false;
+                    else
+                        isPerformanceLoggingEnable = bool.Parse(s);
+                }
+                catch { isPerformanceLoggingEnable = false; }
+                return isPerformanceLoggingEnable.Value;
+            }
         }
 
+        private static bool? isDiagnosticLoggingEnable = null;
         public static bool IsDiagnosticLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsDiagnosticLoggingEnable"].ToString()); }
+            get
+            {
+                if (isDiagnosticLoggingEnable.HasValue)
+                    return isDiagnosticLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsDiagnosticLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isDiagnosticLoggingEnable = false;
+                    else
+                        isDiagnosticLoggingEnable = bool.Parse(s);
+                }
+                catch { isDiagnosticLoggingEnable = false; }
+                return isDiagnosticLoggingEnable.Value;
+            }
         }
 
+        private static bool? isCallLoggingEnable = null;
         public static bool IsCallLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsCallLoggingEnable"].ToString()); }
+            get
+            {
+                if (isCallLoggingEnable.HasValue)
+                    return isCallLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsCallLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isCallLoggingEnable = false;
+                    else
+                        isCallLoggingEnable = bool.Parse(s);
+                }
+                catch { isCallLoggingEnable = false; }
+                return isCallLoggingEnable.Value;
+            }
         }
 
+        private static bool? isExceptionLoggingEnable = null;
         public static bool IsExceptionLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsExceptionLoggingEnable"].ToString()); }
+            get
+            {
+                if (isExceptionLoggingEnable.HasValue)
+                    return isExceptionLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsExceptionLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isExceptionLoggingEnable = false;
+                    else
+                        isExceptionLoggingEnable = bool.Parse(s);
+                }
+                catch { isExceptionLoggingEnable = false; }
+                return isExceptionLoggingEnable.Value;
+            }
         }
 
+        private static bool? isDataLoggingEnable = null;
         public static bool IsDataLoggingEnable
         {
-            get { return bool.Parse(ConfigurationManager.AppSettings["IsDataLoggingEnable"].ToString()); }
+            get
+            {
+                if (isDataLoggingEnable.HasValue)
+                    return isDataLoggingEnable.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["IsDataLoggingEnable"];
+                    if (string.IsNullOrEmpty(s))
+                        isDataLoggingEnable = false;
+                    else
+                        isDataLoggingEnable = bool.Parse(s);
+                }
+                catch { isDataLoggingEnable = false; }
+                return isDataLoggingEnable.Value;
+            }
         }
 
         //public static bool IsCustomLoggingEnable
         //{
-        //    get { return bool.Parse(ConfigurationManager.AppSettings["IsCustomLoggingEnable"].ToString()); }
         //}
     }
 }
