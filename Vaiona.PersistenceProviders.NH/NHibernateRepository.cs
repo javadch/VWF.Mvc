@@ -5,6 +5,8 @@ using System.Text;
 using NHibernate;
 using Vaiona.Persistence.Api;
 using NHibernate.Engine;
+using System.Diagnostics.Contracts;
+using System.Collections;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -14,7 +16,7 @@ namespace Vaiona.PersistenceProviders.NH
     /// <typeparam name="TEntity"></typeparam>
     public class NHibernateRepository<TEntity> : NHibernateReadonlyRepository<TEntity>, IRepository<TEntity> where TEntity : class
     {
-        public IUnitOfWork UnitOfWork { get { return(this.UoW as IUnitOfWork);}  }
+        //public IUnitOfWork UnitOfWork { get { return(this.UoW as IUnitOfWork);}  }
 
         internal NHibernateRepository(IUnitOfWork uow)
             : base(uow)
@@ -108,6 +110,51 @@ namespace Vaiona.PersistenceProviders.NH
                     return false;
             }
             return (true);
+        }
+
+        /// <summary>
+        /// Use this only for delete or update in bulk mode
+        /// </summary>
+        /// <param name="queryString"></param>
+        /// <param name="parameters"></param>
+        /// <param name="isNativeOrORM"></param>
+        /// <returns></returns>
+        public int Execute(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+
+            IQuery query = null;
+            if (isNativeOrORM == false) // ORM native query: like HQL
+            {
+                if (UoW is NHibernateUnitOfWork)
+                    query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
+            }
+            else // Database native query
+            {
+                //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                if (UoW is NHibernateUnitOfWork)
+                    query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+            }
+            if (parameters != null)
+            {
+                foreach (var item in parameters)
+                {
+                    if (item.Value is IList || item.Value is ICollection)
+                    {
+                        query.SetParameterList(item.Key, (IEnumerable)item.Value);
+                    }
+                    else
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+            }            
+            return (query.ExecuteUpdate());
         }
 
         private void applyAuditInfo(TEntity entity)

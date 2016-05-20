@@ -6,6 +6,8 @@ using System.Web.SessionState;
 using System.Globalization;
 using System.Threading;
 using Vaiona.Web.Helpers;
+using Vaiona.Model.MTnt;
+using System.Web;
 
 namespace Vaiona.Web.Extensions
 {
@@ -30,6 +32,25 @@ namespace Vaiona.Web.Extensions
         {
             return (GlobalizationHelper.GetCurrentCulture());
         }
-    
+
+        public static void SetTenant(this HttpSessionState session, Tenant tenant)
+        {
+            session["CurrentTenant"] = tenant;
+        }
+        public static Tenant GetTenant(this HttpSessionState session)
+        {
+            object tenantObj = session["CurrentTenant"];
+            if (tenantObj != null)
+                return (Tenant)tenantObj;
+            return null;
+        }
+
+        public static Tenant GetTenant(this HttpSessionStateBase session)
+        {
+            object tenantObj = session["CurrentTenant"];
+            if (tenantObj != null)
+                return (Tenant)tenantObj;
+            return null;
+        }
     }
 }

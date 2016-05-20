@@ -18,6 +18,8 @@ namespace Vaiona.Persistence.Api
         bool Delete(IEnumerable<TEntity> entities);
         
         IUnitOfWork UnitOfWork { get; }
+
+        int Execute(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false);
     }
 
     //public interface IIntKeyedRepository<TEntity> : IRepository<TEntity> where TEntity : class

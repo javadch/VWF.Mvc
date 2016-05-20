@@ -199,7 +199,7 @@ namespace Vaiona.Utils.Cfg
                 int level = 0;
                 if (string.IsNullOrWhiteSpace(path)) // its a relative path at the same level with the web.config
                     level = 0;
-                else if (path.Contains(@"..\")) // its a relative path but upper than web.config. the number of ..\ patterns shows how many level upper
+                else if (path.Contains(@"..\")) // its a relative path but upper than web.config. the number of ..\ patterns shows how many levels upper
                 {
                     level = path.Split(@"\".ToCharArray()).Length - 1;
                 }
@@ -212,7 +212,7 @@ namespace Vaiona.Utils.Cfg
                 DirectoryInfo di = new DirectoryInfo(AppRoot);
                 while (di.GetFiles("Web.config").Count() >= 1)
                     di = di.Parent;
-                for (int i = 0; i <= level; i++)
+                for (int i = 1; i < level; i++)
                 {
                     di = di.Parent;
                 }
@@ -252,6 +252,18 @@ namespace Vaiona.Utils.Cfg
                 try
                 {
                     return (Path.Combine(WorkspaceRootPath, "General"));
+                }
+                catch { return (string.Empty); }
+            }
+        }
+
+        public static string WorkspaceTenantsRoot
+        {
+            get
+            {
+                try
+                {
+                    return (Path.Combine(WorkspaceRootPath, "Tenants"));
                 }
                 catch { return (string.Empty); }
             }

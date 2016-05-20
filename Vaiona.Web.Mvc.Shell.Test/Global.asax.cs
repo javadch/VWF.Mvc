@@ -9,6 +9,10 @@ using Vaiona.Persistence.Api;
 using Vaiona.Utils.Cfg;
 using System.IO;
 using Vaiona.Web.Mvc.Data;
+using Vaiona.MultiTenancy.Api;
+using Vaiona.Model.MTnt;
+using Vaiona.Web.Extensions;
+using Vaiona.MultiTenancy.Services;
 
 namespace Vaiona.Web.Mvc.Shell.Test
 {
@@ -49,6 +53,18 @@ namespace Vaiona.Web.Mvc.Shell.Test
 
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
+
+            ITenantResolver tenantResolver = IoCFactory.Container.Resolve<ITenantResolver>();
+            ITenantPathProvider pathProvider = new DefaultTenantPathProvider(); // should be instantiated by the IoC. client app should provide the Path Ptovider based on its file and tenant structure
+            tenantResolver.Load(pathProvider); 
+            var x = tenantResolver.Manifest;
+        }
+
+        protected void Session_Start()
+        {
+            ITenantResolver tenantResolver = IoCFactory.Container.Resolve<ITenantResolver>();
+            Tenant tenant = tenantResolver.Resolve(this.Request);
+            this.Session.SetTenant(tenant);
         }
     }
 }

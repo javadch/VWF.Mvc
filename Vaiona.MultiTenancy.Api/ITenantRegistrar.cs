@@ -10,13 +10,14 @@ namespace Vaiona.MultiTenancy.Api
     public interface ITenantRegistrar
     {
         /// <summary>
-        /// It is supposed thw tenant object to be the full path to a zip file containing all the required information to register a tenant
+        /// It is supposed thw tenant object to be the full path to a zip file containing all the required information to register a tenant.
+        /// Update the tenant store and the loaded information
         /// </summary>
         /// <param name="tenant"></param>
-        void Register(object tenant);
+        void Register(Tenant tenant);
         void Unregister(string id);
         void Activate(string id);
         void Inactivate(string id);
-        List<Tenant> GetAll();
+        //List<Tenant> GetAll();
     }
 }
