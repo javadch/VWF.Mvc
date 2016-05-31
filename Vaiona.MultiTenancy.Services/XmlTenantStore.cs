@@ -18,6 +18,12 @@ namespace Vaiona.MultiTenancy.Services
     /// So that it is injected into the resolver/registrar at runtime using the IoC.</remarks>
     public class XmlTenantStore
     {
+        internal string ManifestFilePath { get
+            {
+                return Path.Combine(AppConfiguration.WorkspaceTenantsRoot, "tenants.manifest.xml");
+            }
+        }
+
         public XmlTenantStore(ITenantPathProvider pathProvider)
         {
             this.pathProvider = pathProvider;
@@ -54,8 +60,7 @@ namespace Vaiona.MultiTenancy.Services
             List<Tenant> tenants = new List<Tenant>();
             // get the list from the registry entry
             // load all from the tenent XML entires
-            string tenantsManifestFile = Path.Combine(AppConfiguration.WorkspaceTenantsRoot, "tenants.manifest.xml");
-            XElement manifest = XElement.Load(tenantsManifestFile);
+            XElement manifest = XElement.Load(ManifestFilePath);
             IEnumerable<XElement> xTenants = manifest.Elements("Tenant");
             foreach (var xTenant in xTenants)
             {
@@ -94,7 +99,7 @@ namespace Vaiona.MultiTenancy.Services
             // When loading check if logo, gavicon, privacy policty, etc are provided be the tenant. If not load them from the default
             if (tenant.Status != TenantStatus.Active)
                 return tenant;
-            string tenantManifestFile = Path.Combine(AppConfiguration.WorkspaceTenantsRoot, tenant.Id, "manifest.xml");
+            string tenantManifestFile = GetTenantManifestFile(tenant.Id);
             XElement manifest = null;
             try
             {
@@ -339,16 +344,85 @@ namespace Vaiona.MultiTenancy.Services
         /// Updates the registry entries. Used in activate, inactivate scenarios
         /// </summary>
         /// <param name="tenant"></param>
-        public void Update(Tenant tenant)
+        public void UpdateStatus(Tenant tenant)
         {
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.Id))
+                throw new Exception(string.Format("No tenant information is provided."));
             // do the job
-            Load(); //reload
+            try
+            {
+                XElement manifest = XElement.Load(ManifestFilePath);
+                XElement xTenant;
+                xTenant = manifest.Elements("Tenant")
+                    .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
+                    .Single();
+                xTenant.SetAttributeValue("status", tenant.Status == TenantStatus.Active ? "active" : "inactive");
+                manifest.Save(ManifestFilePath);
+                Load(); //reload
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Tenant {0} was not found.", tenant.Id));
+            }
+        }
+
+        public void MakeDefault(Tenant tenant)
+        {
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.Id))
+                throw new Exception(string.Format("No tenant information is provided."));
+            // do the job
+            try
+            {
+                XElement manifest = XElement.Load(ManifestFilePath);
+                // set all to default == false
+                foreach (var xTenantToBeUnset in manifest.Elements("Tenant"))
+                {
+                    xTenantToBeUnset.SetAttributeValue("default", false);
+                }
+                XElement xTenant =manifest.Elements("Tenant")
+                   .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
+                   .Single();
+                // set the chosen one to default
+                xTenant.SetAttributeValue("default", true);
+                manifest.Save(ManifestFilePath);
+                Load();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Tenant {0} was not found.", tenant.Id));
+            }
+
         }
 
         public void Remove(Tenant tenant)
         {
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.Id))
+                throw new Exception(string.Format("No tenant information is provided."));
             // do the job
-            Load(); //reload
+            try
+            {
+                XElement manifest = XElement.Load(ManifestFilePath);
+                XElement xTenant;
+                xTenant = manifest.Elements("Tenant")
+                    .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
+                    .Single();
+                // remove the entry from the manifest file
+                xTenant.Remove();
+                // delete the tenant package folder from the file system
+                // if done, save the changes to the manifest
+                manifest.Save(ManifestFilePath);
+                Load(); //reload
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Tenant {0} was not found.", tenant.Id));
+            }
         }
+
+        internal string GetTenantManifestFile(string id)
+        {
+            return Path.Combine(AppConfiguration.WorkspaceTenantsRoot, id, "manifest.xml");
+        }
+
     }
 }
