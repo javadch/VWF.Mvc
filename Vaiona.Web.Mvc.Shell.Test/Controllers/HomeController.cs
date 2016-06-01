@@ -19,6 +19,16 @@ namespace Vaiona.Web.Mvc.Shell.Test.Controllers
         {
             ViewBag.Message = "Welcome Tenant: " + Session.GetTenant().Id;
             ITenantRegistrar tenantRegistrar = MultiTenantFactory.GetTenantRegistrar();
+            tenantRegistrar.Inactivate(Session.GetTenant().Id);
+            tenantRegistrar.Activate(Session.GetTenant().Id);
+            
+            tenantRegistrar.MakeDefault("idiv");
+            tenantRegistrar.Unregister("idiv");
+
+            tenantRegistrar.MakeDefault("bexis");
+            tenantRegistrar.Unregister("idiv");
+            tenantRegistrar.Unregister("bexis");
+
             return View();
         }
 

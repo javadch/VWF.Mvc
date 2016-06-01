@@ -65,6 +65,8 @@ namespace Vaiona.Web.Mvc.Shell.Test
             ITenantResolver tenantResolver = IoCFactory.Container.Resolve<ITenantResolver>();
             Tenant tenant = tenantResolver.Resolve(this.Request);
             this.Session.SetTenant(tenant);
+
+
         }
     }
 }
