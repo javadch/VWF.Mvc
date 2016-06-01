@@ -609,6 +609,26 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+        private static string tenantId = "";
+        public static string TenantId
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(tenantId))
+                    return tenantId;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["TenantId"];
+                    if (string.IsNullOrEmpty(s))
+                        tenantId = string.Empty;
+                    else
+                        tenantId = s;
+                }
+                catch { tenantId = string.Empty; }
+                return tenantId;
+            }
+        }
+
         //public static bool IsCustomLoggingEnable
         //{
         //}
