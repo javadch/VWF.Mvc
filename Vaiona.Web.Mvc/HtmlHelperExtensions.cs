@@ -13,6 +13,8 @@ using System.Xml.XPath;
 using System.Diagnostics;
 using System.Globalization;
 using Vaiona.Web.Helpers;
+using Vaiona.Web.Extensions;
+using Vaiona.Model.MTnt;
 
 namespace Vaiona.Web.Mvc
 {
@@ -120,6 +122,11 @@ namespace Vaiona.Web.Mvc
         public static string GetCultureDirection(this HtmlHelper helper)
         {
             return (GlobalizationHelper.GetCurrentCulture().TextInfo.IsRightToLeft ? "right" : "left");
+        }
+
+        public static Tenant GetTenant(this HtmlHelper helper)
+        {
+            return (HttpContext.Current.Session.GetTenant());
         }
 
         public static string GetCultureReverseDirection(this HtmlHelper helper)
