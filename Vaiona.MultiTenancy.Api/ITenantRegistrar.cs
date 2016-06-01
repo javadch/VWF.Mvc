@@ -18,6 +18,7 @@ namespace Vaiona.MultiTenancy.Api
         void Unregister(string id);
         void Activate(string id);
         void Inactivate(string id);
+        void MakeDefault(string id);
         //List<Tenant> GetAll();
     }
 }

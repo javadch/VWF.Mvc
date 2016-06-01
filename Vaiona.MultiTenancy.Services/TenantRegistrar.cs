@@ -30,9 +30,9 @@ namespace Vaiona.MultiTenancy.Services
             }
             catch
             {
-                throw new Exception(string.Format("Tenant with id '{0}' was not found! Operation aborted.", id));
+                throw new Exception(string.Format("Tenant '{0}' was not found. Operation aborted.", id));
             }
-            store.Update(tenant);
+            store.UpdateStatus(tenant);
         }
 
         public void Inactivate(string id)
@@ -45,9 +45,27 @@ namespace Vaiona.MultiTenancy.Services
             }
             catch
             {
-                throw new Exception(string.Format("Tenant with id '{0}' was not found! Operation aborted.", id));
+                throw new Exception(string.Format("Tenant '{0}' was not found. Operation aborted.", id));
             }
-            store.Update(tenant);
+            store.UpdateStatus(tenant);
+        }
+
+        public void MakeDefault(string id)
+        {
+            Tenant tenant = null;
+            try
+            {
+                // It is not reaaly needed to set the default here, but it is done so that if a request arrives during the update
+                // it is served with the latest information
+                store.Tenants.ForEach(p => p.IsDefault = false);
+                tenant = store.Tenants.Where(p => id.Equals(p.Id, StringComparison.InvariantCultureIgnoreCase)).Single();
+                tenant.IsDefault = true;
+            }
+            catch
+            {
+                throw new Exception(string.Format("Tenant '{0}' was not found. Operation aborted.", id));
+            }
+            store.MakeDefault(tenant);
         }
 
         public void Register(Tenant tenant)
@@ -61,17 +79,28 @@ namespace Vaiona.MultiTenancy.Services
 
         public void Unregister(string id)
         {
-            Tenant tenant = null;
+            if (store.Tenants.Count() <= 1)
+                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is the only registered tenent.", id));
+            Tenant tenant;
             try
             {
                 tenant = store.Tenants.Where(p => id.Equals(p.Id, StringComparison.InvariantCultureIgnoreCase)).Single();
-                tenant.Status = TenantStatus.Active;
             }
             catch
             {
-                throw new Exception(string.Format("Tenant with id '{0}' was not found! Operation aborted.", id));
+                throw new Exception(string.Format("Tenant '{0}' was not found! Operation aborted.", id));
             }
-            store.Remove(tenant);
+
+            if (tenant.IsDefault == true)
+                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is the default tenent.", id));
+            try
+            {
+                store.Remove(tenant);
+            }
+            catch
+            {
+                throw new Exception(string.Format("Tenant '{0}' was not unresigtered! Operation aborted.", id));
+            }
         }
     }
 }
