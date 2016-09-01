@@ -68,19 +68,19 @@ namespace Vaiona.MultiTenancy.Services
             store.MakeDefault(tenant);
         }
 
-        public void Register(Tenant tenant)
+        public void Register(string tenatId, string tenantZipPackagePath, bool deleteSource = true)
         {
-            // create the tenant entry
-            // check the tenant folder is created
-            // check the file based properties have thier own files in the tenent folder
-            // check/create the tenant's manifest
-            store.Create(tenant);
+            try
+            {
+                store.Create(tenatId, tenantZipPackagePath, deleteSource);
+            }
+            catch (Exception ex)
+            { // more detailed exception handeling
+            }
         }
 
         public void Unregister(string id)
         {
-            if (store.Tenants.Count() <= 1)
-                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is the only registered tenent.", id));
             Tenant tenant;
             try
             {
@@ -91,8 +91,21 @@ namespace Vaiona.MultiTenancy.Services
                 throw new Exception(string.Format("Tenant '{0}' was not found! Operation aborted.", id));
             }
 
+            if (store.Tenants.Count() <= 1)
+                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is the only registered tenent.", id));
+
+            // It is not allowed to delete the DEFAULT tenant. If needed, another tenant must be set as the default, before deleting the chosen one.
             if (tenant.IsDefault == true)
                 throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is the default tenent.", id));
+
+            // It is not allowed to delete an ACTIVE tenant. If needed, the chosen tenant must be inctivated first.
+            if (tenant.Status == TenantStatus.Active)
+                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. It is active.", id));
+            
+            // There MUST at least one active tenant remaining registered after deleting this one
+            if(store.Tenants.Where(p=>p.Status == TenantStatus.Active).Count() <= 0)
+                throw new Exception(string.Format("Tenant '{0}' could not be unregistered. There would not be another active tenant after unregistering '{0}'.", id));
+
             try
             {
                 store.Remove(tenant);

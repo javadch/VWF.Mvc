@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -18,9 +19,9 @@ namespace Vaiona.MultiTenancy.Services
     /// So that it is injected into the resolver/registrar at runtime using the IoC.</remarks>
     public class XmlTenantStore
     {
-        internal string ManifestFilePath { get
+        internal string CatalogFilePath { get
             {
-                return Path.Combine(AppConfiguration.WorkspaceTenantsRoot, "tenants.manifest.xml");
+                return Path.Combine(AppConfiguration.WorkspaceTenantsRoot, "tenants.catalog.xml");
             }
         }
 
@@ -34,33 +35,35 @@ namespace Vaiona.MultiTenancy.Services
 
         public List<Tenant> Tenants { get { return tenants; } }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public List<Tenant> Load()
         {
             tenants.Clear();
-            var manifest = LoadManifest();
-            Tenant defaultTenant = manifest.Where(p => p.IsDefault == true).SingleOrDefault();
+            var catalog = LoadCatalog();
+            Tenant defaultTenant = catalog.Where(p => p.IsDefault == true).SingleOrDefault();
             if (!string.IsNullOrWhiteSpace(defaultTenant.Id))
             {
-                tenants.Add(LoadTenant(defaultTenant, null)); // the default tenant must be loaded first
-                manifest.Where(p=> defaultTenant.Id != p.Id).ToList() // other manifests, except the default one. It is already loaded
-                    .ForEach(p => tenants.Add(LoadTenant(p, defaultTenant)));
+                tenants.Add(LoadTenant(defaultTenant.Id, null)); // the default tenant must be loaded first
+                catalog.Where(p=> defaultTenant.Id != p.Id).ToList() // other manifests, except the default one. It is already loaded
+                    .ForEach(p => tenants.Add(LoadTenant(p.Id, defaultTenant)));
             }
             else
-                manifest.ForEach(p => tenants.Add(LoadTenant(p, null)));
+                catalog.ForEach(p => tenants.Add(LoadTenant(p.Id, null)));
             tenants.ForEach(p => p.PathProvider = pathProvider);
             return tenants;
         }
-     
+
         /// <summary>
         /// Use the tenants manifest file to list the tenant manifest information
         /// </summary>
         /// <returns></returns>
-        public List<Tenant> LoadManifest()
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public List<Tenant> LoadCatalog()
         {
             List<Tenant> tenants = new List<Tenant>();
             // get the list from the registry entry
             // load all from the tenent XML entires
-            XElement manifest = XElement.Load(ManifestFilePath);
+            XElement manifest = XElement.Load(CatalogFilePath);
             IEnumerable<XElement> xTenants = manifest.Elements("Tenant");
             foreach (var xTenant in xTenants)
             {
@@ -90,15 +93,18 @@ namespace Vaiona.MultiTenancy.Services
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public Tenant LoadTenant(Tenant tenant, Tenant defaultTenant)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public Tenant LoadTenant(string tenantId, Tenant defaultTenant)
         {
+            Tenant tenant = new Tenant();
+            tenant.Id = tenantId;
             // each tenant has its own folder. Inside the folder there is a manifest file containg the textual information of the tenent.
             // Its named manifest.xml
             //empty manifest attributes will be taken from the fallback tenant, if requested by the manifest
-            //bu default bexis is the fallback tenant. 
+            //by default bexis is the fallback tenant. 
             // When loading check if logo, gavicon, privacy policty, etc are provided be the tenant. If not load them from the default
-            if (tenant.Status != TenantStatus.Active)
-                return tenant;
+            //if (tenant.Status != TenantStatus.Active)
+            //    return tenant;
             string tenantManifestFile = GetTenantManifestFile(tenant.Id);
             XElement manifest = null;
             try
@@ -124,7 +130,7 @@ namespace Vaiona.MultiTenancy.Services
             try
             {
                 tenant.UseFallback = bool.Parse(manifest.Attribute("useFallback").Value);
-                if(tenant.UseFallback)
+                if(tenant.UseFallback && tenant.Id != defaultTenant.Id)
                     tenant.Fallback = defaultTenant;
             }
             catch
@@ -327,6 +333,16 @@ namespace Vaiona.MultiTenancy.Services
                     tenant.ExtendedMenus = defaultTenant.ExtendedMenus;
             }
 
+            try
+            {
+                tenant.Resources = manifest.Element("Resources").Elements("Resource").ToList();
+            }
+            catch
+            {
+                if (tenant.UseFallback == true && tenant.Fallback != null)
+                    tenant.Resources = defaultTenant.Resources;
+            }
+
             return tenant;
         }
 
@@ -334,12 +350,38 @@ namespace Vaiona.MultiTenancy.Services
         /// Transforms the tenant to its XML representation and stores it
         /// </summary>
         /// <param name="tenant"></param>
-        public void Create(Tenant tenant)
+        public void Create(string tenantId, string tenantZipPackagePath, bool deleteSource = true)
         {
-            // do the job
-            Load(); //reload
+            // build the source and destination paths and extract the package to the destination
+            string zipPath = Path.Combine(tenantZipPackagePath, tenantId + ".zip");
+            string extractPath = Path.Combine(AppConfiguration.WorkspaceTenantsRoot, tenantId);
+
+            System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractPath);
+
+            Load(); // Reload to grab the latest defualt
+            Tenant defaultTenant = Tenants.Where(p => p.IsDefault == true).SingleOrDefault();
+            // Load the tenant's manifest and poulate a tenant object out of it.
+            Tenant tenant = LoadTenant(tenantId, defaultTenant);
+            // create an entry in the catalog for the unzipped tenant package.
+            AddTenantToCatlog(tenant);
+            Load(); //Reload to reflect latest updates
+
         }
 
+        public void AddTenantToCatlog(Tenant tenant)
+        {
+            tenant.IsDefault = false;
+            tenant.Status = TenantStatus.Inactive; // newly added tenant are inactive and non-default
+            XElement xTenant = new XElement("Tenant");
+            xTenant.Attribute("id").SetValue(tenant.Id);
+            xTenant.Attribute("default").SetValue(tenant.IsDefault);
+            xTenant.Attribute("status").SetValue(tenant.Status == TenantStatus.Active? "active": "inactive");
+
+            XElement manifest = XElement.Load(CatalogFilePath);
+            IEnumerable<XElement> xTenants = manifest.Elements("Tenant");
+            xTenants.Last().AddAfterSelf(xTenant);
+            manifest.Save(CatalogFilePath);
+        }
         /// <summary>
         /// Updates the registry entries. Used in activate, inactivate scenarios
         /// </summary>
@@ -351,13 +393,13 @@ namespace Vaiona.MultiTenancy.Services
             // do the job
             try
             {
-                XElement manifest = XElement.Load(ManifestFilePath);
+                XElement manifest = XElement.Load(CatalogFilePath);
                 XElement xTenant;
                 xTenant = manifest.Elements("Tenant")
                     .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
                     .Single();
                 xTenant.SetAttributeValue("status", tenant.Status == TenantStatus.Active ? "active" : "inactive");
-                manifest.Save(ManifestFilePath);
+                manifest.Save(CatalogFilePath);
                 Load(); //reload
             }
             catch (Exception ex)
@@ -373,7 +415,7 @@ namespace Vaiona.MultiTenancy.Services
             // do the job
             try
             {
-                XElement manifest = XElement.Load(ManifestFilePath);
+                XElement manifest = XElement.Load(CatalogFilePath);
                 // set all to default == false
                 foreach (var xTenantToBeUnset in manifest.Elements("Tenant"))
                 {
@@ -384,7 +426,7 @@ namespace Vaiona.MultiTenancy.Services
                    .Single();
                 // set the chosen one to default
                 xTenant.SetAttributeValue("default", true);
-                manifest.Save(ManifestFilePath);
+                manifest.Save(CatalogFilePath);
                 Load();
             }
             catch (Exception ex)
@@ -401,16 +443,27 @@ namespace Vaiona.MultiTenancy.Services
             // do the job
             try
             {
-                XElement manifest = XElement.Load(ManifestFilePath);
+                XElement manifest = XElement.Load(CatalogFilePath);
                 XElement xTenant;
                 xTenant = manifest.Elements("Tenant")
                     .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
                     .Single();
+                //TxFileManager fileMgr = new TxFileManager();
+                //using (TransactionScope scope1 = new TransactionScope())
+                //{
+                //    // Copy a file
+                //    fileMgr.Copy(srcFileName, destFileName);
+
+                //    // Insert a database record
+                //    dbMgr.ExecuteNonQuery(insertSql);
+
+                //    scope1.Complete();
+                //}
                 // remove the entry from the manifest file
                 xTenant.Remove();
                 // delete the tenant package folder from the file system
                 // if done, save the changes to the manifest
-                manifest.Save(ManifestFilePath);
+                manifest.Save(CatalogFilePath);
                 Load(); //reload
             }
             catch (Exception ex)
