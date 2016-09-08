@@ -29,6 +29,16 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+        public static bool IsPostBack(HttpRequestBase request)
+        {
+            if (request.UrlReferrer == null) return false;
+
+            bool isPost = "POST".Equals(request.HttpMethod, StringComparison.CurrentCultureIgnoreCase);
+            bool isSameUrl = request.Url.AbsolutePath.Equals(request.UrlReferrer.AbsolutePath, StringComparison.CurrentCultureIgnoreCase);
+
+            return isPost && isSameUrl;
+        }
+
         public static ConnectionStringSettings DefaultApplicationConnection
         {
             get
