@@ -323,11 +323,11 @@ namespace Vaiona.Web.Security.Az.Parser
 			return parentRule;
 		}
 
-		class RulePair
-		{
-			public IAccessRule Start, Current;
+		//class RulePair
+		//{
+		//	public IAccessRule Start, Current;
 
-		}
+		//}
 
 		enum State
 		{
