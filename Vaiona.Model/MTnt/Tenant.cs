@@ -69,6 +69,8 @@ namespace Vaiona.Model.MTnt
         /// Extended menus are links to external URLs and presented differently (comparing to the built-in menus) to the tenant's users
         /// </summary>
         public XElement ExtendedMenus { get; set; }
+        public List<XElement> Resources { get; set; }
+
         public TenantStatus Status { get; set; }
         
         /// <summary>
@@ -151,5 +153,33 @@ namespace Vaiona.Model.MTnt
         public List<string> AllowedFileExtensions { get; set; }
 
         public int MaximumUploadSize { get; set; }
+
+        public string GetResourcePath(string resourceKey)
+        {
+            XElement xResource = this.Resources.Where(p => p.Attribute("key").Value.Equals(resourceKey, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+            if (xResource == null || string.IsNullOrWhiteSpace(xResource.Attribute("key").Value))
+                return null;
+            if("image".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (this.UseFallback == true && this.Fallback != null)
+                    return PathProvider.GetImagePath(this.Id, xResource.Attribute("id").Value, Fallback.Id);
+                else
+                    return PathProvider.GetImagePath(this.Id, xResource.Attribute("id").Value, this.Id); // The second this.Id argument is passed to allow the Client TenantPathProviders to have a chance of getting triggered.
+            } else if ("content".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (this.UseFallback == true && this.Fallback != null)
+                    return PathProvider.GetContentFilePath(this.Id, xResource.Attribute("id").Value, Fallback.Id);
+                else
+                    return PathProvider.GetContentFilePath(this.Id, xResource.Attribute("id").Value, this.Id);
+            }
+            else if ("theme".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (this.UseFallback == true && this.Fallback != null)
+                    return PathProvider.GetThemePath(this.Id, xResource.Attribute("id").Value, Fallback.Id);
+                else
+                    return PathProvider.GetThemePath(this.Id, xResource.Attribute("id").Value, this.Id);
+            }
+            return null;
+        }
     }
 }
