@@ -11,9 +11,11 @@ namespace Vaiona.Logging.Aspects
 {
     [Serializable]
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    [LinesOfCodeAvoided(1)]
     public class RecordCallAttribute : MethodInterceptionAspect
     {
         public override void OnInvoke(MethodInterceptionArgs args)
+
         {
             if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCallLoggingEnable)
                 return;
