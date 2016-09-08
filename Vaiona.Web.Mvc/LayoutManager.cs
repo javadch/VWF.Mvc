@@ -46,6 +46,28 @@ namespace Vaiona.Web.Mvc
             }
         }
 
+        public static string GetLayoutName(this HtmlHelper helper)
+        {
+            string layoutName = "~/Views/Shared/_Layout.cshtml"; // built-in layout
+            var request = helper.ViewContext.HttpContext.Request;
+            var session = helper.ViewContext.HttpContext.Session;
+            if (AppConfiguration.IsPostBack(request) && !string.IsNullOrWhiteSpace(request["Theme"]))
+            {
+                Themes.CurrentTheme = request["Theme"];
+                session["CurrentTheme"] = Themes.CurrentTheme;
+            }
+            else if (session["CurrentTheme"] != null)
+            {
+                Themes.CurrentTheme = session["CurrentTheme"] as string;
+            }
+            string layoutFileName = string.Concat(AppConfiguration.ActiveLayoutName, ".cshtml");
+            layoutFileName = Themes.GetResourcePath("Layouts", layoutFileName); // Auto fallback to DefaultTheme
+            if (!string.IsNullOrWhiteSpace(layoutFileName))
+            {
+                layoutName = layoutFileName;
+            }
+            return layoutName;
+        }
         private static MvcHtmlString RenderThemedContent(this HtmlHelper helper, ActionModel actionModel, bool fallbackToNonThemedVersion = true)
         {
             string path = Themes.GetResourcePath("Partials", string.Concat(actionModel.ViewName, ".cshtml"));

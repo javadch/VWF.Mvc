@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
+using Vaiona.Model.MTnt;
 using Vaiona.Utils.Cfg;
 
 namespace Vaiona.Web.Mvc.Models
@@ -22,7 +23,7 @@ namespace Vaiona.Web.Mvc.Models
             } 
         }
 
-        public static string GetViewTitle(string viewTitle)
+        public static string GetGenericViewTitle(string viewTitle)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(viewTitle));
 
@@ -33,5 +34,19 @@ namespace Vaiona.Web.Mvc.Models
             }
             return viewTitle;
         }
+
+        public static string GetViewTitleForTenant(string viewTitle, Tenant tenant)
+        {
+            Contract.Requires(!string.IsNullOrWhiteSpace(viewTitle));
+            Contract.Requires(tenant != null);
+
+            string appInfo = tenant.ShortName;
+            if (!string.IsNullOrWhiteSpace(appInfo))
+            {
+                return string.Format("{0} - {1}", appInfo, viewTitle);
+            }
+            return viewTitle;
+        }
+
     }
 }
