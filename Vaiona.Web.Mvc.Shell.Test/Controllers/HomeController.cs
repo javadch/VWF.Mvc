@@ -18,16 +18,16 @@ namespace Vaiona.Web.Mvc.Shell.Test.Controllers
         public ActionResult Index()
         {
             ViewBag.Message = "Welcome Tenant: " + Session.GetTenant().Id;
-            ITenantRegistrar tenantRegistrar = MultiTenantFactory.GetTenantRegistrar();
-            tenantRegistrar.Inactivate(Session.GetTenant().Id);
-            tenantRegistrar.Activate(Session.GetTenant().Id);
+            //ITenantRegistrar tenantRegistrar = MultiTenantFactory.GetTenantRegistrar();
+            //tenantRegistrar.Inactivate(Session.GetTenant().Id);
+            //tenantRegistrar.Activate(Session.GetTenant().Id);
             
-            tenantRegistrar.MakeDefault("idiv");
-            tenantRegistrar.Unregister("idiv");
+            //tenantRegistrar.MakeDefault("idiv");
+            //tenantRegistrar.Unregister("idiv");
 
-            tenantRegistrar.MakeDefault("bexis");
-            tenantRegistrar.Unregister("idiv");
-            tenantRegistrar.Unregister("bexis");
+            //tenantRegistrar.MakeDefault("bexis");
+            //tenantRegistrar.Unregister("idiv");
+            //tenantRegistrar.Unregister("bexis");
 
             return View();
         }
@@ -68,8 +68,8 @@ namespace Vaiona.Web.Mvc.Shell.Test.Controllers
         public ActionResult Ex()
         {
             ViewBag.Message = "Welcome to ASP.NET MVC!";
-            throw new Exception("I am uncaught exception wanted to be logged. Hurray!");
-            return View();
+            throw new Exception("I am an uncaught exception wanted to be logged. Hurray!");
+            //return View();
         }
 
         [DoesNotNeedDataAccess]
