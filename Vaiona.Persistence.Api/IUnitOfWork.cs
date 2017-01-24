@@ -6,10 +6,38 @@ using System.Text;
 namespace Vaiona.Persistence.Api
 {
     // maybe its better to change it to IWorkPackage
+    public enum CacheMode
+    {
+        //
+        // Summary:
+        //     The session will never interact with the cache, except to invalidate cache items
+        //     when updates occur
+        Ignore = 0,
+        //
+        // Summary:
+        //     The session will never read items from the cache, but will add items to the cache
+        //     as it reads them from the database.
+        Put = 1,
+        //
+        // Summary:
+        //     The session may read items from the cache, but will not add items, except to
+        //     invalidate items when updates occur
+        Get = 2,
+        //
+        // Summary:
+        //     The session may read items from the cache, and add items to the cache
+        Normal = 3,
+        //
+        // Summary:
+        //     The session will never read items from the cache, but will add items to the cache
+        //     as it reads them from the database. In this mode, the effect of hibernate.cache.use_minimal_puts
+        //     is bypassed, in order to force a cache refresh
+        Refresh = 5    
+    }
     public interface IUnitOfWork: IDisposable
     {
         IPersistenceManager PersistenceManager { get; }
-        IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>() where TEntity : class;
+        IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>(CacheMode cacheMode = CacheMode.Ignore) where TEntity : class;
         IRepository<TEntity> GetRepository<TEntity>() where TEntity : class;
         void ClearCache(bool applyChanages=true);
 
