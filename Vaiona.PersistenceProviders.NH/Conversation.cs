@@ -76,9 +76,9 @@ namespace Vaiona.PersistenceProviders.NH
             // if uow is already there, its a wrong call pattern! a unit of work is trying to start the conversation more than once!!
             registerUnit(session, uow);
             if (!AppConfiguration.CacheQueryResults)
-                session.CacheMode = CacheMode.Ignore;
+                session.CacheMode = NHibernate.CacheMode.Ignore;
             else
-                session.CacheMode = CacheMode.Normal;
+                session.CacheMode = NHibernate.CacheMode.Normal;
             if (!session.Transaction.IsActive)
                 session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             if (showQueries)

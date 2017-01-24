@@ -19,7 +19,7 @@ namespace Vaiona.PersistenceProviders.NH
         //public IUnitOfWork UnitOfWork { get { return(this.UoW as IUnitOfWork);}  }
 
         internal NHibernateRepository(IUnitOfWork uow)
-            : base(uow)
+            : base(uow, Persistence.Api.CacheMode.Normal) // this cache mode should be changed according to the uow's session's cache mode
         {
         }
 
@@ -72,16 +72,44 @@ namespace Vaiona.PersistenceProviders.NH
 
         public bool Put(IEnumerable<TEntity> entities)
         {
-            foreach (var entity in entities)
+            if (UoW is NHibernateUnitOfWork)
             {
-                //session.Lock(entity, LockMode.None);
-                //applyStateInfo(entity);
-                //applyAuditInfo(entity);
-                //UoW.Session.SaveOrUpdate(entity);
-                if (!Put(entity))
-                    return false;
+                return putStatefull(((NHibernateUnitOfWork)UoW).Session, entities);
             }
-            return (true);
+            else if (UoW is NHibernateBulkUnitOfWork)
+            {
+                return putStateless(((NHibernateBulkUnitOfWork)UoW).Session, entities);
+            }
+            return (false);
+        }
+
+        private bool putStateless(IStatelessSession session, IEnumerable<TEntity> entities)
+        {
+            try
+            { 
+                foreach (var entity in entities)
+                {
+                    applyStateInfo(entity);
+                    applyAuditInfo(entity);
+                    session.Insert(entity);
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+        private bool putStatefull(ISession session, IEnumerable<TEntity> entities)
+        {
+            try
+            {
+                foreach (var entity in entities)
+                {
+                    applyStateInfo(entity);
+                    applyAuditInfo(entity);
+                    session.SaveOrUpdate(entity);
+                }
+                return true;
+            }
+            catch { return false; }
         }
 
         public bool Delete(TEntity entity)
@@ -112,14 +140,30 @@ namespace Vaiona.PersistenceProviders.NH
             return (true);
         }
 
+        public bool Delete(IEnumerable<Int64> entityIds)
+        {
+            try
+            {
+                string queryString = string.Format("DELETE FROM {0} e WHERE e.Id IN (:idsList)", typeof(TEntity).Name);
+                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                parameters.Add("idsList", entityIds);
+                this.Execute(queryString, parameters);
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+            return (true);
+        }
         /// <summary>
         /// Use this only for delete or update in bulk mode
         /// </summary>
         /// <param name="queryString"></param>
         /// <param name="parameters"></param>
         /// <param name="isNativeOrORM"></param>
+        /// <param name="timeoput">Query Timeout in seconds</param>
         /// <returns></returns>
-        public int Execute(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false)
+        public int Execute(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false, int timeout = 100)
         {
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
@@ -153,7 +197,8 @@ namespace Vaiona.PersistenceProviders.NH
                         query.SetParameter(item.Key, item.Value);
                     }
                 }
-            }            
+            }
+            query.SetTimeout(timeout);
             return (query.ExecuteUpdate());
         }
 

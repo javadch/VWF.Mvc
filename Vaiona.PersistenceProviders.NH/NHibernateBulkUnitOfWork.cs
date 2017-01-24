@@ -27,9 +27,9 @@ namespace Vaiona.PersistenceProviders.NH
             this.Session.Transaction.Begin();
         }
 
-        public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>() where TEntity : class
+        public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>(Vaiona.Persistence.Api.CacheMode cacheMode = Vaiona.Persistence.Api.CacheMode.Ignore) where TEntity : class
         {
-            IReadOnlyRepository<TEntity> repo = new NHibernateReadonlyRepository<TEntity>(this);
+            IReadOnlyRepository<TEntity> repo = new NHibernateReadonlyRepository<TEntity>(this, cacheMode);
             return (repo);
         }
 

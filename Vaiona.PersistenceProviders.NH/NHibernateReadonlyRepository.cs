@@ -15,18 +15,19 @@ namespace Vaiona.PersistenceProviders.NH
     public class NHibernateReadonlyRepository<TEntity> : IReadOnlyRepository<TEntity> where TEntity : class
     {
         protected IUnitOfWork UoW = null;
-
-        internal NHibernateReadonlyRepository(IUnitOfWork uow)
+        NHibernate.CacheMode cacheMode = NHibernate.CacheMode.Ignore;
+        internal NHibernateReadonlyRepository(IUnitOfWork uow, Vaiona.Persistence.Api.CacheMode cacheMode)
         {
             this.UoW = uow;
+            this.cacheMode = (NHibernate.CacheMode)Enum.Parse(typeof(NHibernate.CacheMode), Enum.GetName(typeof(Vaiona.Persistence.Api.CacheMode), cacheMode));
         }
 
         public IUnitOfWork UnitOfWork { get { return (UoW);} }
 
         public void Evict()
         {
-            if(UoW is NHibernateUnitOfWork)
-                ((NHibernateUnitOfWork)UoW).Session.SessionFactory.Evict(typeof(TEntity));
+            if (UoW is NHibernateUnitOfWork)
+                ((NHibernateUnitOfWork)UoW).Session.Clear(); // .SessionFactory.Evict(typeof(TEntity));
         }
 
         public void Evict(object id)
@@ -93,9 +94,14 @@ namespace Vaiona.PersistenceProviders.NH
 
             IQuery query = null;
             if (UoW is NHibernateUnitOfWork)
+            {
                 query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                query.SetCacheMode(cacheMode);
+            }
             else if (UoW is NHibernateBulkUnitOfWork)
+            {
                 query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+            }
             if (parameters != null)
             {
                 foreach (var item in parameters)
@@ -119,9 +125,14 @@ namespace Vaiona.PersistenceProviders.NH
 
             IQuery query = null;
             if (UoW is NHibernateUnitOfWork)
+            {
                 query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                query.SetCacheMode(cacheMode);
+            }
             else if (UoW is NHibernateBulkUnitOfWork)
+            {
                 query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+            }
             if (parameters != null)
             {
                 foreach (var item in parameters)
@@ -141,17 +152,27 @@ namespace Vaiona.PersistenceProviders.NH
             if (isNativeOrORM == false) // ORM native query: like HQL
             {
                 if (UoW is NHibernateUnitOfWork)
+                {
                     query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
+                    query.SetCacheMode(cacheMode);
+                }
                 else if (UoW is NHibernateBulkUnitOfWork)
+                {
                     query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
+                }
             }
             else // Database native query
             {
                 //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
                 if (UoW is NHibernateUnitOfWork)
+                {
                     query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                    query.SetCacheMode(cacheMode);
+                }
                 else if (UoW is NHibernateBulkUnitOfWork)
+                {
                     query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                }
             }
             if (parameters != null)
             {
@@ -172,7 +193,7 @@ namespace Vaiona.PersistenceProviders.NH
         {
             //return (UoW.Session.Query<TEntity>());
             if (UoW is NHibernateUnitOfWork)
-                return (((NHibernateUnitOfWork)UoW).Session.Query<TEntity>());
+                return (((NHibernateUnitOfWork)UoW).Session.Query<TEntity>().CacheMode(cacheMode));
             else if (UoW is NHibernateBulkUnitOfWork)
                 return (((NHibernateBulkUnitOfWork)UoW).Session.Query<TEntity>());
             return null;
