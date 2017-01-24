@@ -8,7 +8,7 @@ using System.Reflection;
 namespace Vaiona.Web.Mvc
 {
 
-    public static class ModuleManager
+    public static class ModuleHelper
     {
         public static Assembly ApplicationAssembly = null;
 
@@ -31,7 +31,7 @@ namespace Vaiona.Web.Mvc
 
         public static List<string> GetAreaNames()
         {
-            return (ModuleManager.Areas.Select(p => p.AreaName).ToList());
+            return (ModuleHelper.Areas.Select(p => p.AreaName).ToList());
         }
 
         public static List<Type> GetControllersByArea(AreaRegistration area)
@@ -61,7 +61,7 @@ namespace Vaiona.Web.Mvc
         public static List<Type> GetControllers()
         {
             List<Type> controllers =
-            ModuleManager.ApplicationAssembly.GetTypes() // it should be replaced with assemblies of modules
+            ModuleHelper.ApplicationAssembly.GetTypes() // it should be replaced with assemblies of modules
                     .Where(t =>
                         t != null
                         && t.IsPublic &&
