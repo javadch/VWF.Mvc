@@ -14,7 +14,7 @@ namespace Vaiona.Logging.Aspects
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class LogExceptionsAttribute : OnExceptionAspect
     {
-        public override void OnException(MethodExecutionArgs args)
+        public sealed override void OnException(MethodExecutionArgs args)
         {
             //base.OnException(eventArgs);
 

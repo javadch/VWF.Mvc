@@ -13,7 +13,7 @@ namespace Vaiona.Logging.Aspects
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class MeasurePerformanceAttribute : OnMethodBoundaryAspect
     {
-        public override void OnEntry(MethodExecutionArgs args)
+        public sealed override void OnEntry(MethodExecutionArgs args)
         {
             if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsPerformanceLoggingEnable)
                 return;
@@ -23,7 +23,7 @@ namespace Vaiona.Logging.Aspects
             args.MethodExecutionTag = sw;
         }
 
-        public override void OnExit(MethodExecutionArgs args)
+        public sealed override void OnExit(MethodExecutionArgs args)
         {
             if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsPerformanceLoggingEnable)
                 return;

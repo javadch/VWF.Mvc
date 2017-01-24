@@ -14,7 +14,7 @@ namespace Vaiona.Logging.Aspects
     [LinesOfCodeAvoided(1)]
     public class RecordCallAttribute : MethodInterceptionAspect
     {
-        public override void OnInvoke(MethodInterceptionArgs args)
+        public sealed override void OnInvoke(MethodInterceptionArgs args)
 
         {
             if (!AppConfiguration.IsLoggingEnable || !AppConfiguration.IsCallLoggingEnable)
