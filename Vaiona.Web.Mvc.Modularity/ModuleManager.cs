@@ -22,6 +22,8 @@ namespace Vaiona.Web.Mvc.Modularity
         /// </summary>
         public static List<ModuleInfo> ModuleInfos { get { return moduleInfos; } }
 
+        public static XElement ExportTree = new XElement("Export", ".");
+
         private static XElement catalog;
         public static XElement Catalog // it may need caching, etc
         {
@@ -89,7 +91,12 @@ namespace Vaiona.Web.Mvc.Modularity
 
         public static void Register(string moduleId)
         {
-
+            // unzip the foler into the areas folder
+            // check the manifest
+            // add entry to the catalog, if catalog does not exist: create it
+            // set the status to inactive.
+            // load the assembly
+            // install the routes, etc.
         }
         public static void Upgrade(string moduleId)
         {
@@ -143,6 +150,15 @@ namespace Vaiona.Web.Mvc.Modularity
                 //    RouteTable.Routes.Remove(RouteTable.Routes[item.Key]);
                 //}
             }
+        }
+
+        internal static void Add(ModuleInfo moduleMetadata)
+        {
+            if (moduleInfos.Count(p => p.Id.Equals(moduleMetadata.Id, StringComparison.InvariantCultureIgnoreCase)) > 0)
+                return;
+            moduleInfos.Add(moduleMetadata);
+            // add the current module's exports to the ModuleManager export ExportTree.
+            // Only the UI exports for now.
         }
 
         public static void Enable(string moduleId, bool updateCatalog = true)

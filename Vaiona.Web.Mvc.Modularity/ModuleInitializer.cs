@@ -97,7 +97,7 @@ namespace Vaiona.Web.Mvc.Modularity
                                     BuildManager.AddReferencedAssembly(asm);
                                     moduleMetadata.Path = moduleDir;
                                     //Add the modules to the PluginManager to manage them later
-                                    ModuleManager.ModuleInfos.Add(moduleMetadata);
+                                    ModuleManager.Add(moduleMetadata);
                                 }
                             }
                         }
