@@ -146,19 +146,19 @@ namespace Vaiona.Web.Security.Management
 
         public void ExportSecuirtyFeaturesToDatabase()
         {
-            foreach (var area in ModuleManager.Areas)
+            foreach (var area in ModuleHelper.Areas)
             {
                 // complete feature key + display name
                 // add the area to the DB
                 AccessRuleEntity areaEntity = addFeatureToDB(area.AreaName, area.AreaName, null);
-                foreach (var controller in ModuleManager.GetControllersByArea(area))
+                foreach (var controller in ModuleHelper.GetControllersByArea(area))
                 {
                     // add area.controller to the DB
                     string controllerName = controller.Name.Replace("Controller", "");
                     string controllerKey = string.Format("{0}.{1}", area.AreaName, controllerName);
                     AccessRuleEntity controllerEntity = addFeatureToDB(controllerKey, controllerName, areaEntity);
-                    var securedActions = ModuleManager.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() <= 0).ToList();
-                    var openActions = ModuleManager.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() > 0).ToList();
+                    var securedActions = ModuleHelper.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() <= 0).ToList();
+                    var openActions = ModuleHelper.GetActionsByController(controller).Where(p => p.GetCustomAttributes(typeof(AllowAnonymousAttribute), true).Count() > 0).ToList();
                     foreach (var action in securedActions)
                     {
                         // add the area.controller.action to the DB
