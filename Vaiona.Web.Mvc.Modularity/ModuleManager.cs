@@ -23,7 +23,7 @@ namespace Vaiona.Web.Mvc.Modularity
         public static List<ModuleInfo> ModuleInfos { get { return moduleInfos; } }
 
         private static XElement exportTree = null;
-        public static XElement ExportTree { get { return ExportTree; } }
+        public static XElement ExportTree { get { return exportTree; } }
 
         private static XElement catalog;
         public static XElement Catalog // it may need caching, etc
@@ -93,6 +93,45 @@ namespace Vaiona.Web.Mvc.Modularity
                     buildExportParts(moduleInfo.Manifest.ManifestDoc.Element("Exports").Elements("Export"), moduleId);
                 }
             }
+            resolveNameConflicts(exportTree);
+        }
+
+        private static void resolveNameConflicts(XElement node)
+        {
+            if(node.Elements() != null)
+            {
+                // check for identical titles, and prefix them with the moduleID if found 
+                foreach (var current in node.Elements("Export"))
+                {
+                    resolveNameConflicts(current); // resolve the children of the current node
+
+                    // find title conflicts between the current node and its sibling after itself.
+                    bool currentMustChange = false;
+                    foreach (var sibling in current.ElementsAfterSelf("Export"))
+                    {
+                        if (current.Attribute("title").Value.Equals(sibling.Attribute("title").Value, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            currentMustChange = true;
+                            // set the sibling export node's title
+                            if (!string.IsNullOrWhiteSpace(sibling.Attribute("area").Value)) // Shell items are not prefixed
+                            {
+                                string newTitle = string.Format("{0}: {1}", sibling.Attribute("area").Value.Capitalize(), sibling.Attribute("title").Value);
+                                sibling.SetAttributeValue("title", newTitle);
+                            }
+                        }
+                    }
+                    // when done comaring to all the siblings, apply the needed changes to the current node.
+                    if(currentMustChange)
+                    {
+                        // set the current node's title
+                        if (!string.IsNullOrWhiteSpace(current.Attribute("area").Value)) // Shell items are not prefixed
+                        {
+                            string newTitle = string.Format("{0}: {1}", current.Attribute("area").Value.Capitalize(), current.Attribute("title").Value);
+                            current.SetAttributeValue("title", newTitle);
+                        }
+                    }
+                }
+            }
         }
 
         private static void buildExportParts(IEnumerable<XElement> exportItems, string areaName)
@@ -127,7 +166,7 @@ namespace Vaiona.Web.Mvc.Modularity
                         if (foundNode == null) // create an element
                         {
                             foundNode = new XElement("Export",
-                                                new XAttribute("title", pathElement),
+                                                new XAttribute("title", pathElement.Capitalize()),
                                                 new XAttribute("id", pathElement),
                                                 new XAttribute("order", current.Elements() != null ? current.Elements().Count() + 1 : 1),
                                                 new XAttribute("extends", string.Join("/", extendPath.Skip(0).Take(pathCounter))),
@@ -138,8 +177,35 @@ namespace Vaiona.Web.Mvc.Modularity
                     }
                     pathCounter++;
                 }
+                // enforce the area name, so that no module can register an export point on behalf of other modules
                 export.SetAttributeValue("area", areaName);
-                current.Add(export);
+                // assign an order to the export point if not provided
+                if (export.Attribute("order") == null || string.IsNullOrWhiteSpace(export.Attribute("order").Value))
+                    export.SetAttributeValue("order", current.Elements() != null ? current.Elements().Count() + 1 : 1);
+                // locate the child node that the export point should be added before it.
+                XElement insertBeforeThis = null;
+                if(current.Elements() != null)
+                {
+                    int exportOrder = int.Parse(export.Attribute("order").Value);
+                    foreach (var child in current.Elements("Export"))
+                    {
+                        int childOrder = int.Parse(child.Attribute("order").Value);
+                        if(exportOrder < childOrder) // only <, because this export node is coming later, so in case of =, the existing one has precedence.
+                        {
+                            insertBeforeThis = child;
+                            break;
+                        }
+                    }
+                }
+                // add the export to the right place
+                if (insertBeforeThis != null)
+                {
+                    insertBeforeThis.AddBeforeSelf(export);
+                }
+                else // add it to the end
+                {
+                    current.Add(export);
+                }
 
             }
         }

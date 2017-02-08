@@ -113,6 +113,7 @@ namespace Vaiona.Web.Mvc.Modularity
                         url: AreaName + "/{controller}/{action}/{id}",
                         defaults:
                         new RouteValueDictionary {
+                            { "controller", "Home" }, // module/home/index would be shortened to /module only. not tested yet.
                             { "action", "Index" },
                             { "id", UrlParameter.Optional }
                         },
