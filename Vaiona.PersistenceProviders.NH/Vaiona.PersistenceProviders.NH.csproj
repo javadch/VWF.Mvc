@@ -71,6 +71,10 @@
       <Project>{63FCACAA-9534-4FDD-A082-78DCC06BAF28}</Project>
       <Name>Vaiona.Utils</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Vaiona.Web.Mvc.Modularity\Vaiona.Web.Mvc.Modularity.csproj">
+      <Project>{705F8751-E58A-453E-A7FD-0C310FD3CAE8}</Project>
+      <Name>Vaiona.Web.Mvc.Modularity</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

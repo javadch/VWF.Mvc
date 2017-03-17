@@ -6,6 +6,7 @@ using System.Web.Compilation;
 using System.Web.Hosting;
 using System.Xml.Linq;
 using Vaiona.Utils.Cfg;
+using Vaiona.Utils.IO;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
@@ -69,47 +70,85 @@ namespace Vaiona.Web.Mvc.Modularity
                 string manifestFileName = string.Format("{0}.Manifest.xml", moduleDir.Name);
                 if (moduleDir.GetFiles(manifestFileName, SearchOption.TopDirectoryOnly).Count() == 1)
                 {
-                    try
-                    {
-                        var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First();
-                        // for each module get the its main assembly, the one tha contains the type inheritted from the ModuleBase
-                        string assemblyNamePattern = string.Format("*.{0}.UI.dll", moduleDir.Name);
-                        var assemblieNames = moduleBinFolder.GetFiles(assemblyNamePattern, SearchOption.TopDirectoryOnly)
-                                                            .Select(x => AssemblyName.GetAssemblyName(x.FullName))
-                                                            .ToList();
-                        foreach (var asmName in assemblieNames)
-                        {
-                            var asm = Assembly.Load(asmName);
-                            // check for for a class that inherits from the ModuleBase class
-                            Type type = asm.GetTypes()
-                                           .Where(t => typeof(ModuleBase).IsAssignableFrom(t)).FirstOrDefault();
-                            if (type != null)
-                            {
-                                ModuleInfo moduleMetadata = new ModuleInfo();
-                                moduleMetadata.Id = moduleDir.Name;
-                                moduleMetadata.EntryType = type;
-                                // instance will be created later with the area registration
-                                //var plugin = (ModuleBase)Activator.CreateInstance(type);
-                                // Check for duplicates
-                                if (!ModuleManager.ModuleInfos.Contains(moduleMetadata))
-                                {
-                                    //Add the plugin (module's entry assembly/type) as a reference to the application
-                                    BuildManager.AddReferencedAssembly(asm);
-                                    moduleMetadata.Path = moduleDir;
-                                    //Add the modules to the PluginManager to manage them later
-                                    ModuleManager.Add(moduleMetadata);
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(string.Format("Module {0} does not have the proper structure! No bin folder found.", moduleDir.Name), ex);
-                    }
+                    var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First();
+                    loadEntryAssembly(moduleDir, moduleBinFolder);
+                    loadSatelliteAssemblies(moduleId, moduleDir, moduleBinFolder);
                 }
                 else
                 {
                     throw new Exception(string.Format("Folder: {0} located at: {1} is supposed to be a module, but does not contain a valid manifest file.", moduleDir.Name, moduleDir.FullName));
+                }
+            }
+        }
+
+        private static void loadEntryAssembly(DirectoryInfo moduleDir, DirectoryInfo moduleBinFolder)
+        {
+            try
+            {
+                // for each module get its main assembly, the one that contains the type inheritted from the ModuleBase
+                string assemblyNamePattern = string.Format("*.{0}.UI.dll", moduleDir.Name);
+                var assemblyName = moduleBinFolder.GetFiles(assemblyNamePattern, SearchOption.TopDirectoryOnly)
+                                                    .Select(x => AssemblyName.GetAssemblyName(x.FullName))
+                                                    .FirstOrDefault();
+
+                var asm = Assembly.Load(assemblyName);
+                // check for for a class that inherits from the ModuleBase class
+                Type type = asm.GetTypes()
+                                .Where(t => typeof(ModuleBase).IsAssignableFrom(t)).FirstOrDefault();
+                if (type != null)
+                {
+                    ModuleInfo moduleMetadata = new ModuleInfo();
+                    moduleMetadata.Id = moduleDir.Name;
+                    moduleMetadata.EntryType = type;
+                    // instance will be created later with the area registration
+                    //var plugin = (ModuleBase)Activator.CreateInstance(type);
+                    // Check for duplicates
+                    if (!ModuleManager.ModuleInfos.Contains(moduleMetadata))
+                    {
+                        //Add the plugin (module's entry assembly/type) as a reference to the application
+                        BuildManager.AddReferencedAssembly(asm);
+                        ModuleManager.CacheAssembly(assemblyName.Name + ".dll", asm);
+                        moduleMetadata.Path = moduleDir;
+                        //Add the modules to the PluginManager to manage them later
+                        ModuleManager.Add(moduleMetadata);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Module {0} does not have the proper structure! No bin folder or no entry assembly found.", moduleDir.Name), ex);
+            }
+        }
+
+        private static void loadSatelliteAssemblies(string moduleId, DirectoryInfo moduleDir, DirectoryInfo moduleBinFolder)
+        {
+            XElement manifest;
+            string manifestFileName = string.Format("{0}{1}{2}.Manifest.xml", moduleDir.FullName, Path.DirectorySeparatorChar, moduleId);
+
+            FileHelper.WaitForFile(manifestFileName);
+            using (var stream = File.Open(manifestFileName, FileMode.Open, FileAccess.Read))
+            {
+                manifest = XElement.Load(stream);
+                try
+                {
+                    var xAssemblies = manifest.Element("Assemblies").Elements("Assembly")
+                                                .Where(x => !string.IsNullOrWhiteSpace(x.Attribute("fullName").Value))
+                                                .ToList();
+                    foreach (var xAsm in xAssemblies)
+                    {
+                        string asmName = xAsm.Attribute("fullName").Value;
+                        asmName = asmName.EndsWith(".dll") ? asmName : asmName + ".dll";
+                        if (moduleBinFolder.GetFiles(asmName, SearchOption.TopDirectoryOnly).Count() == 1)                                           
+                        {
+                            var asm = Assembly.LoadFrom(Path.Combine(moduleBinFolder.FullName, asmName));
+                            //Add the plugin's satellite assembly as a reference to the application
+                            BuildManager.AddReferencedAssembly(asm);
+                            ModuleManager.CacheAssembly(asmName, asm);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                { // Do nothing
                 }
             }
         }

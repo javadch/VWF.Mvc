@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web.Routing;
 using System.Xml.Linq;
 using Vaiona.Utils.Cfg;
+using Vaiona.Utils.IO;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
@@ -213,7 +214,7 @@ namespace Vaiona.Web.Mvc.Modularity
         private static void loadCatalog()
         {
             string filePath = Path.Combine(AppConfiguration.WorkspaceModulesRoot, catalogFileName);
-            Vaiona.Utils.IO.FileHelper.WaitForFile(filePath);
+            FileHelper.WaitForFile(filePath);
             using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
             {
                 catalog = XElement.Load(stream);
@@ -244,7 +245,7 @@ namespace Vaiona.Web.Mvc.Modularity
             BuildExportTree();
         }
 
-        public static void Register(string moduleId)
+        public static void Install(string moduleId)
         {
             // unzip the foler into the areas folder
             // check the manifest
@@ -253,12 +254,33 @@ namespace Vaiona.Web.Mvc.Modularity
             // load the assembly
             // install the routes, etc.
         }
+
+        /// <summary>
+        /// When a module is registered for the first time, it is in "pending" status.
+        /// Later on its first load by the shell, it will be checked for schema export, etc. and transfered to "inactive"
+        /// </summary>
+        /// <returns></returns>
+        public static bool HasPendingInstallation()
+        {
+            var pendingModules = from m in catalog.Elements("Module")
+                                    where m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
+                                    select m;
+            return (pendingModules.Count() > 0);
+        }
+        public static List<string> PendingModules()
+        {
+            var pendingModules = from m in catalog.Elements("Module")
+                                 where m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
+                                 select m.Attribute("id").Value;
+            return (pendingModules.ToList());
+        }
+
         public static void Upgrade(string moduleId)
         {
 
         }
 
-        public static void UnRegister(string moduleId)
+        public static void Uninstall(string moduleId)
         {
 
         }
@@ -346,6 +368,59 @@ namespace Vaiona.Web.Mvc.Modularity
                 .FirstOrDefault();
             return entry;
         }
+
+        private static Dictionary<string, Assembly> moduleAssemblyCache = new Dictionary<string, Assembly>();
+        public static void CacheAssembly(string assemblyName, Assembly assembly)
+        {
+            if (!moduleAssemblyCache.ContainsKey(assemblyName))
+                moduleAssemblyCache.Add(assemblyName, assembly);
+        }
+        /// <summary>
+        /// This method is bound to the AppDomain.CurrentDomain.AssemblyResolve event so that when the appDomain
+        /// requests to resolve an assembly, the plugin assemblies are resolved from the already loaded plugin cache managed by the PluginManager class.
+        /// </summary>
+        /// <param name="sender">not used.</param>
+        /// <param name="args">contains the assembly named requested and optioanlly the assemby itself.</param>
+        /// <returns>The resolved assembly, the cached plugin assembly</returns>
+        /// <remarks>Exceptions are managed nby the callaing code.</remarks>
+        public static Assembly ResolveCurrentDomainAssembly(object sender, ResolveEventArgs args)
+        {
+            if (args.RequestingAssembly != null)
+                return args.RequestingAssembly;
+            // At this point, the catalog may be checked to see if the requested assembly belongs to a disabled module, the resolution should fail.                
+            //ModuleBase module = pluginManager.ModuleInfos.
+            //    SingleOrDefault(x => (x.EntryType.Assembly.FullName == args.Name) && (x.Manifest.IsEnabled == true)).Plugin;
+
+            string asmName = new AssemblyName(args.Name).Name;
+
+            var moduleIfo = ModuleInfos
+                .Where(x => (x.EntryType.Assembly.FullName.Equals(asmName, StringComparison.InvariantCultureIgnoreCase))
+                //&& (x.Manifest.IsEnabled == true) // check the catalog
+                )
+                .FirstOrDefault();
+            if (moduleIfo != null)
+            {
+                return moduleIfo.EntryType.Assembly;
+            }
+
+            // check the module cache
+            string asmNameEx = asmName + ".dll";
+            if (moduleAssemblyCache.ContainsKey(asmNameEx))
+                return moduleAssemblyCache[asmNameEx];
+
+            throw new Exception(string.Format("Unable to load assembly {0}", asmName));
+        }
+
+        public static void StartModules()
+        {
+            ModuleManager.ModuleInfos.ForEach(module => module.Plugin.Start());
+        }
+
+        public static void ShutdownModules()
+        {
+            ModuleManager.ModuleInfos.ForEach(module => module.Plugin.Shutdown());
+        }
+
     }
 
 }

@@ -18,6 +18,7 @@ namespace Vaiona.Web.Mvc.Modularity
     /// </summary>
     public abstract class ModuleBase : AreaRegistration
     {
+        protected AreaRegistrationContext context = null;
         private Dictionary<string, Route> moduleRoutes = new Dictionary<string, Route>();
         public Dictionary<string, Route> ModuleRoutes { get { return moduleRoutes; } }
         public ModuleInfo Metadata { get; set; }
@@ -26,7 +27,6 @@ namespace Vaiona.Web.Mvc.Modularity
             load(moduleId);
             RegisterModuleRoute("default", DefaultRoute);
         }
-
         private void load(string moduleId)
         {
             var moduleInfo = ModuleManager.ModuleInfos.Where(p => p.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
@@ -90,6 +90,7 @@ namespace Vaiona.Web.Mvc.Modularity
         /// </remarks>
         public override void RegisterArea(AreaRegistrationContext context)
         {
+            this.context = context;
             context.Routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
             // the route handler associated with the route objects check for module status
             //if (!PluginManager.IsActive(this.Name))

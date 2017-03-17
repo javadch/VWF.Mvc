@@ -12,6 +12,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Vaiona.Utils.Cfg;
 using System.Diagnostics;
+using System.Reflection;
+using Vaiona.Web.Mvc.Modularity;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -58,6 +60,22 @@ namespace Vaiona.PersistenceProviders.NH
             Contract.Ensures(cfg != null);
         }
 
+        /// <summary>
+        /// Registers a newly installed module with the persistence manager.
+        /// It installs the mapping files, adds the assembly that contains the entities, and
+        /// recreates a session factory.
+        /// </summary>
+        /// <param name="moduleId">The module id as registered in the catalog</param>
+        /// <param name="cfg"> the NH configuration object that the mapping files are registered with it.</param>
+        /// <param name="fallbackFoler">The folder than contains default and DBMS neutral mapping files</param>
+        /// <param name="dialect">The specific DBMS dialect to be used in the current configuration</param>
+        /// <param name="post">holds a reference to the post installation files compiled from merging of the PostObjects folder of the fallback and dialect folders</param>
+        public void InstallModule(string moduleId, Configuration cfg, string fallbackFoler, string dialect, ref Dictionary<string, List<FileInfo>> post)
+        {
+            // register the mapping files
+            // register assemblies
+            // rebuild the seesion factory. check what should happen to the existing sessions
+        }
         public void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false)
         {
             // think of installing a module separately: export that module to DB, add entries to cfg., restart cfg and session factory, etc.
@@ -361,7 +379,7 @@ namespace Vaiona.PersistenceProviders.NH
         /// <param name="dialect">The specific DBMS dialect to be used in the current configuration</param>
         /// <param name="componentOrModulePath">if module: this is the root folder of all the modules. if component, the root folder containing all the components</param>
         /// <param name="post">holds a reference to the post installation files compiled from merging of the PostObjects folder of the fallback and dialect folders</param>
-        private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath, ref Dictionary<string, List<FileInfo>> post)
+        private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath, ref Dictionary<string, List<FileInfo>> post, bool isModule=false)
         {
             if (!Directory.Exists(componentOrModulePath))
                 return;
@@ -370,6 +388,18 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
                 mappingFiles.ForEach(p => cfg.AddFile(p));
+                // double check, maybe it is not needed
+                if (isModule) // its is module, so the module's entity container assembly should also be added
+                {
+                    var asmElement = ModuleManager.GetModuleInfo(moduleOrComponentDir.Name.ToLower())
+                                        .Manifest.ManifestDoc.Element("Assemblies").Elements("Assmebly")
+                                        .Where(p => p.Attribute("role").Value.Equals("Entity", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                    if(asmElement != null && !string.IsNullOrWhiteSpace(asmElement.Attribute("name").Value))
+                    {
+                        Assembly asm = Assembly.Load(asmElement.Attribute("name").Value);
+                        cfg.AddAssembly(asm);
+                    }
+                }
             }
         }
 
