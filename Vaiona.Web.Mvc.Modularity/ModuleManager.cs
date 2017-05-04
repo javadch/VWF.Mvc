@@ -5,15 +5,20 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
+using System.Web.Hosting;
 using System.Web.Routing;
 using System.Xml.Linq;
 using Vaiona.Utils.Cfg;
 using Vaiona.Utils.IO;
+using Ionic.Zip;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
     public class ModuleManager
     {
+        private static Dictionary<string, Assembly> moduleAssemblyCache = new Dictionary<string, Assembly>();
+        public static string DeploymentRoot = HostingEnvironment.MapPath("~/Areas");
         private const string catalogFileName = "Modules.Catalog.xml";
         private static FileSystemWatcher watcher = new FileSystemWatcher();
 
@@ -245,14 +250,56 @@ namespace Vaiona.Web.Mvc.Modularity
             BuildExportTree();
         }
 
-        public static void Install(string moduleId)
+        /// <summary>
+        /// Receives a module in a zipped file and installs or upgrades it on the system
+        /// </summary>
+        /// <param name="bundle">The module's required resources in zipped form. The bundle contains the binaries, views, static and dynamic resources, and the manifest.</param>
+        public static void Install(HttpPostedFileBase bundle, bool installForProduction = true)
         {
             // unzip the foler into the areas folder
             // check the manifest
             // add entry to the catalog, if catalog does not exist: create it
-            // set the status to inactive.
-            // load the assembly
+            // set the status to pending.
+            // load the assembly? may need restart
             // install the routes, etc.
+                        
+            string moduleName = "";
+            string moduleVersion = "";
+            string installationPath = Path.Combine(AppConfiguration.WorkspaceModulesRoot, "installing");
+            string path = "";
+
+            /// 1: Acquire the bundle, check if the same bundle is installing? if yes, return an error
+            if (bundle == null || bundle.ContentLength <= 0)
+                throw new System.Exception(string.Format("The submited file is not valid. Operation aborted."));
+
+            var fileName = Path.GetFileName(bundle.FileName);
+            moduleName = fileName.Substring(0, fileName.IndexOf("."));
+            moduleVersion = fileName.Substring(fileName.IndexOf(".") + 1, (fileName.LastIndexOf(".") - fileName.IndexOf(".") - 1));
+
+            path = installationPath;
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+            path = Path.Combine(path, fileName);
+            if (System.IO.File.Exists(path)) // the module is being installed from another session
+            {
+                throw new Exception(string.Format("Bundle {0} is being installed from another session or a previous installation attempt has failed. Operation aborted.", fileName));
+            }
+
+            /// 2: Save the bundle in the "installing" folder for further processing.
+            bundle.SaveAs(path);
+
+            /// 3: Validate the bundle
+            validateBundle(moduleName, moduleVersion, installationPath); // throws exception on validation issues
+
+            /// 4: Distribute the content of the bundle to proper places
+            copyBundleElements(moduleName, moduleVersion, installationPath, installForProduction);
+
+            /// 5: Register the module in the modules catalog
+            registerModule(moduleName);
+
+            /// 6: Delete the zipped bundle any any temprorary file.folder created during installation
+            cleanUpInstallation(moduleName, moduleVersion, installationPath); // expect empty parameters
+
         }
 
         /// <summary>
@@ -267,6 +314,12 @@ namespace Vaiona.Web.Mvc.Modularity
                                     select m;
             return (pendingModules.Count() > 0);
         }
+        
+        /// <summary>
+        /// Lists the modules thata re currently in the pending state.
+        /// Pending state indicates that the module is in installation process.
+        /// </summary>
+        /// <returns></returns>
         public static List<string> PendingModules()
         {
             var pendingModules = from m in catalog.Elements("Module")
@@ -290,6 +343,7 @@ namespace Vaiona.Web.Mvc.Modularity
             bool isActive = moduleElement.Attribute("status").Value.Equals("Active", StringComparison.InvariantCultureIgnoreCase) ? true : false;
             return isActive;
         }
+
         public static bool IsActive(string moduleId)
         {
             var isActive = from entry in catalog.Elements("Module")
@@ -301,6 +355,7 @@ namespace Vaiona.Web.Mvc.Modularity
             // return IsActive(mElement);
             return (isActive != null ? isActive.FirstOrDefault() : false);
         }
+
         public static void Disable(string moduleId, bool updateCatalog = true)
         {
             setStatus(moduleId, "inactive", updateCatalog);
@@ -314,6 +369,15 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             setStatus(moduleId, "active", updateCatalog);
             if(updateCatalog == true)
+            {
+                BuildExportTree();
+            }
+        }
+
+        public static void SetStatus(string moduleId, string status, bool updateCatalog = true)
+        {
+            setStatus(moduleId, status, updateCatalog);
+            if (updateCatalog == true)
             {
                 BuildExportTree();
             }
@@ -356,25 +420,29 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             return get(moduleId);
         }
-        private static ModuleInfo get(string moduleId)
+
+        public static ModuleManifest GetModuleManifest(string moduleId)
         {
-            return moduleInfos.Where(m => m.Manifest.Name.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
+            var moduleInfo = get(moduleId);
+            if (moduleInfo != null && moduleInfo.Manifest != null)
+                return moduleInfo.Manifest;
+            
+            string manifestPath = Path.Combine(ModuleManager.DeploymentRoot, moduleId, string.Format("{0}.Manifest.xml", moduleId));
+            ModuleManifest manifest = new ModuleManifest(manifestPath);
+            return manifest;
         }
 
-        private static XElement getCatalogEntry(string moduleId)
+        public static bool IsModuleLoaded(string moduleId)
         {
-            var entry = catalog.Elements("Module")
-                .Where(x => x.Attribute("id").Value.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase))
-                .FirstOrDefault();
-            return entry;
+            return moduleInfos.Count(m => m.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase) && m.Plugin != null) > 0;
         }
 
-        private static Dictionary<string, Assembly> moduleAssemblyCache = new Dictionary<string, Assembly>();
         public static void CacheAssembly(string assemblyName, Assembly assembly)
         {
             if (!moduleAssemblyCache.ContainsKey(assemblyName))
                 moduleAssemblyCache.Add(assemblyName, assembly);
         }
+
         /// <summary>
         /// This method is bound to the AppDomain.CurrentDomain.AssemblyResolve event so that when the appDomain
         /// requests to resolve an assembly, the plugin assemblies are resolved from the already loaded plugin cache managed by the PluginManager class.
@@ -413,14 +481,200 @@ namespace Vaiona.Web.Mvc.Modularity
 
         public static void StartModules()
         {
-            ModuleManager.ModuleInfos.ForEach(module => module.Plugin.Start());
+            moduleInfos.ForEach(module => module.Plugin.Start());
         }
 
         public static void ShutdownModules()
         {
-            ModuleManager.ModuleInfos.ForEach(module => module.Plugin.Shutdown());
+            moduleInfos.ForEach(module => module.Plugin.Shutdown());
         }
 
+        /// <summary>
+        /// Creates or updates a module registration entry in the catalog, sets its status and order. It may reorder the other modules if needed.
+        /// </summary>
+        /// <param name="moduleId">The module's identifier</param>
+        /// <param name="status">The status that the module will hold after registaration</param>
+        /// <param name="order">The module's order in catalog. defulat value zero (0) put the modules at the end of catlog entries.</param>
+        /// <param name="updateIfExists">Determines weather the entry should be updated if it already exists. Otherwise an exception is thrown.</param>
+        private static void registerModule(string moduleId, string status = "pending", int order = 0, bool updateIfExists = true)
+        {
+            var cachedCatalog = catalog;
+            XElement catalogEntry = cachedCatalog.Elements("Module")
+                                      .Where(x => x.Attribute("id").Value.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase))
+                                      .FirstOrDefault();
+            if (catalogEntry != null)
+            {
+                if (updateIfExists == false) // entry exists, but should not be updated
+                {
+                    throw new Exception(string.Format("Module '{0}' already exists but is not allowed to be altered.", moduleId));
+                }
+                else // detach the entry so that the rest of the algorithm functions properly.
+                {
+                    catalogEntry.Remove();
+                }
+            }
+            // either the module does not exist, or it is detached from the list to be updated
+            if (catalogEntry == null) // the module does not exist in the catalog
+            {
+                catalogEntry = new XElement("Module");
+            }
+
+            // set/update the entry's attributes
+            catalogEntry.SetAttributeValue("id", moduleId);
+            catalogEntry.SetAttributeValue("status", status);
+            catalogEntry.SetAttributeValue("order", order > 0 ? order : moduleInfos.Count + 1); // by default it is set to the end.
+
+            // update the order attribute of the other modules
+            foreach (var entry in cachedCatalog.Elements("Module").Where(x => int.Parse(x.Attribute("order").Value) >= order && order > 0))
+            {
+                entry.SetAttributeValue("order", int.Parse(entry.Attribute("order").Value) + 1);
+            }
+
+            // add the created/updated entry to cached catalog
+            cachedCatalog.Add(catalogEntry);
+
+            //sort catalog on "order" ascending and apply the ordering changes on the casched catalog
+            var sortedCatalogItems = cachedCatalog.Elements("Module")
+                                                    .OrderBy(p => int.Parse(p.Attribute("order").Value))
+                                                    .ToList();
+            cachedCatalog.Elements("Module").Remove();
+            cachedCatalog.Add(sortedCatalogItems);
+
+            // disable the catalog watcher, apply the changes onto catalog and enable the watcher
+            // this method updates the catalog file without causing modules reloaded.
+            watcher.EnableRaisingEvents = false;
+            cachedCatalog.Save(Path.Combine(AppConfiguration.WorkspaceModulesRoot, catalogFileName));
+            watcher.EnableRaisingEvents = true;
+        }
+
+
+        private static void copyBundleElements(string moduleName, string moduleVersion, string installationPath, bool installForProduction = true)
+        {
+            //throw new NotImplementedException();
+            string zipPath = Path.Combine(installationPath, moduleName + "." + moduleVersion + ".zip");
+            var zip = ZipFile.Read(zipPath);
+            string tempPath = Path.Combine(installationPath, moduleName, moduleVersion);
+            try
+            {
+                if (Directory.Exists(tempPath))
+                    Directory.Delete(tempPath);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Could not delete directoty {0}. {1}", tempPath, ex.Message));
+            }
+            try
+            {
+                Directory.CreateDirectory(tempPath);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Could not create directoty {0}. {1}", tempPath, ex.Message));
+            }
+            try
+            {
+                zip.ExtractAll(tempPath);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Could not unzip bundle {0} to directory {1}. {2}", moduleName, tempPath, ex.Message));
+            }
+
+            // in debug mode, there is no need to copy the files because they are already in the right place and more importantly the bundle will overwite the sources!
+           
+            if (installForProduction)
+            {
+                //move the workspace, if exists in the bundle
+                string moduleWorkspace = Path.Combine(AppConfiguration.WorkspaceModulesRoot, moduleName);
+                try
+                {
+                    if (Directory.Exists(moduleWorkspace))
+                    {
+                        // remove the module's workspace and its content. 
+                        // It may remove existing module specific settings. So better guard it with a user selected switch (UI)
+                        //Directory.Delete(moduleWorkspace, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(string.Format("Could not delete directoty {0}. {1}", moduleWorkspace, ex.Message));
+                }
+                try
+                {
+                    FileHelper.MoveAndReplace(Path.Combine(tempPath, "Workspace"), moduleWorkspace);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(string.Format("Could not move the bundle's worspace to {0}. {1}", moduleWorkspace, ex.Message));
+                }
+                // move whatever else that needs to go to a place other than the module's root
+
+                // move whatever is remained to the module's root. This should include bin, Content, Scripts, and Views folder plus the manifest file.
+                string moduleDepolymentPath = Path.Combine(ModuleManager.DeploymentRoot, moduleName, moduleVersion); // the version is ONLY for testing purpose. must be removed!
+                try
+                {
+                    if (Directory.Exists(moduleDepolymentPath))
+                        Directory.Delete(moduleDepolymentPath, true);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(string.Format("Could not delete directoty {0}. {1}", moduleDepolymentPath, ex.Message));
+                }
+                try
+                {
+                    // remove the bin folder's assemblies that are not listed in the manifest
+
+                    // move the reamining 
+                    Directory.Move(tempPath, moduleDepolymentPath); // in case use MoveAndReplace
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception(string.Format("Could not move the bundle's binaries to {0}. {1}", moduleDepolymentPath, ex.Message));
+                }
+            }
+            //end if
+        }
+
+        private static void cleanUpInstallation(string moduleName, string moduleVersion, string installationPath)
+        {
+            // delete the temprary module folder created during installation
+            Directory.GetDirectories(installationPath, moduleName).ToList()
+                .ForEach(p => Directory.Delete(p, true));
+            // delete the uploaded zip bundle
+            Directory.GetFiles(installationPath, string.Format("{0}.*.zip", moduleName)).ToList()
+                .ForEach(p => File.Delete(p));
+        }
+
+        private static void validateBundle(string moduleName, string moduleVersion, string installationPath)
+        {
+            // check the module version: zip, manifest, UI assembly.
+            // check if an equal or a higher version is already installed
+            var existingModule = ModuleManager.GetModuleInfo(moduleName);
+            if (existingModule != null)
+            {
+                Version exisitingVersion = new Version(existingModule.Manifest.Version);
+                Version incomingVersion = new Version(moduleVersion);
+                if (exisitingVersion >= incomingVersion)
+                {
+                    throw new Exception(string.Format("A higher version of the '{0}' module is already installed.", moduleName));
+                }
+            }
+            // check if the declaraed dependecies are already available. module/version
+
+        }
+
+        private static ModuleInfo get(string moduleId)
+        {
+            return moduleInfos.Where(m => m.Manifest.Name.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
+        }
+
+        private static XElement getCatalogEntry(string moduleId)
+        {
+            var entry = catalog.Elements("Module")
+                .Where(x => x.Attribute("id").Value.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase))
+                .FirstOrDefault();
+            return entry;
+        }
     }
 
 }

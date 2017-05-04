@@ -41,7 +41,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 return;
 
             // Use AppConfiguration for path selection
-            string areasPath = HostingEnvironment.MapPath("~/Areas");
+            string areasPath = ModuleManager.DeploymentRoot;
             areasFolder = new DirectoryInfo(areasPath);
             if (areasFolder == null || !areasFolder.Exists)
                 throw new DirectoryNotFoundException("Areas");
@@ -55,7 +55,9 @@ namespace Vaiona.Web.Mvc.Modularity
             // for now each folder in the Areas folder means a potential module
             XElement catalog = XElement.Load(Path.Combine(AppConfiguration.WorkspaceModulesRoot, "Modules.Catalog.xml"));
             var activeModules = from m in catalog.Elements("Module")
-                                where m.Attribute("status").Value.Equals("Active", StringComparison.InvariantCultureIgnoreCase)
+                                where (m.Attribute("status").Value.Equals("Active", StringComparison.InvariantCultureIgnoreCase)
+                                        || m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
+                                      )
                                 select m;
             foreach (var moduleEntry in activeModules)
             //foreach (var moduleDir in areasFolder.GetDirectories())
@@ -71,8 +73,8 @@ namespace Vaiona.Web.Mvc.Modularity
                 if (moduleDir.GetFiles(manifestFileName, SearchOption.TopDirectoryOnly).Count() == 1)
                 {
                     var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First();
-                    loadEntryAssembly(moduleDir, moduleBinFolder);
                     loadSatelliteAssemblies(moduleId, moduleDir, moduleBinFolder);
+                    loadEntryAssembly(moduleDir, moduleBinFolder);
                 }
                 else
                 {
@@ -106,7 +108,13 @@ namespace Vaiona.Web.Mvc.Modularity
                     if (!ModuleManager.ModuleInfos.Contains(moduleMetadata))
                     {
                         //Add the plugin (module's entry assembly/type) as a reference to the application
-                        BuildManager.AddReferencedAssembly(asm);
+                        // Check if the assmebly is aleary added. if not possible to check, guard
+                        try
+                        {
+                            BuildManager.AddReferencedAssembly(asm);
+                        } catch(Exception)
+                        { // it is aleady added
+                        }
                         ModuleManager.CacheAssembly(assemblyName.Name + ".dll", asm);
                         moduleMetadata.Path = moduleDir;
                         //Add the modules to the PluginManager to manage them later
@@ -142,7 +150,13 @@ namespace Vaiona.Web.Mvc.Modularity
                         {
                             var asm = Assembly.LoadFrom(Path.Combine(moduleBinFolder.FullName, asmName));
                             //Add the plugin's satellite assembly as a reference to the application
-                            BuildManager.AddReferencedAssembly(asm);
+                            try
+                            {
+                                //BuildManager.AddReferencedAssembly(asm);
+                            }
+                            catch (Exception)
+                            { // it is aleady added
+                            }
                             ModuleManager.CacheAssembly(asmName, asm);
                         }
                     }

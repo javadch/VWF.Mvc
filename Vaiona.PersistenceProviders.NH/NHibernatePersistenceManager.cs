@@ -76,6 +76,7 @@ namespace Vaiona.PersistenceProviders.NH
             // register assemblies
             // rebuild the seesion factory. check what should happen to the existing sessions
         }
+
         public void ExportSchema(bool generateScript = false, bool executeAgainstTargetDB = true, bool justDrop = false)
         {
             // think of installing a module separately: export that module to DB, add entries to cfg., restart cfg and session factory, etc.
@@ -99,13 +100,19 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void UpdateSchema(bool generateScript = false, bool executeAgainstTargetDB = true)
         {
-            System.Action<string> updateExport = x => {
-                using (var file = new System.IO.FileStream(@"D:\temp\update.sql", System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.Write))
-                using (var sw = new System.IO.StreamWriter(file)) {
-                    sw.Write(x);
-                    sw.Close();
+            Action<string> updateExport = x => 
+            {
+                string fileName = Path.Combine(AppConfiguration.WorkspaceRootPath, "temp", "update.sql");
+                using (var file = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.Write))
+                {
+                    using (var sw = new StreamWriter(file))
+                    {
+                        sw.Write(x);
+                        sw.Close();
+                    }
                 }
             };
+
             using (var session = sessionFactory.OpenSession())
             {
                 using (var trans = session.BeginTransaction())

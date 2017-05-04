@@ -50,5 +50,27 @@ namespace Vaiona.Utils.IO
             { }
             return true;
         }
+
+        public static void MoveAndReplace(string sourceDirectoty, string targetDirectory)
+        {
+            var sourcePath = sourceDirectoty.TrimEnd('\\', ' ');
+            var targetPath = targetDirectory.TrimEnd('\\', ' ');
+            var files = Directory.EnumerateFiles(sourcePath, "*", SearchOption.AllDirectories)
+                                 .GroupBy(s => Path.GetDirectoryName(s));
+            foreach (var folder in files)
+            {
+                var targetFolder = folder.Key.Replace(sourcePath, targetPath);
+                Directory.CreateDirectory(targetFolder);
+                foreach (var file in folder)
+                {
+                    var targetFile = Path.Combine(targetFolder, Path.GetFileName(file));
+                    if (System.IO.File.Exists(targetFile))
+                        System.IO.File.Delete(targetFile);
+                    System.IO.File.Move(file, targetFile);
+                }
+            }
+            Directory.Delete(sourceDirectoty, true);
+        }
+
     }
 }

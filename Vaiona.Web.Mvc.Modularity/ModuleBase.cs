@@ -38,9 +38,9 @@ namespace Vaiona.Web.Mvc.Modularity
             moduleInfo.Plugin = this;
             this.Metadata = moduleInfo;
             // load the manifest file
-            string manifestPath = string.Format("{0}{1}{2}.Manifest.xml", moduleInfo.Path.FullName, Path.DirectorySeparatorChar, moduleInfo.Id);
-            XElement manifest = XElement.Load(manifestPath); // mayneed to go into the element itself
-            moduleInfo.Manifest = new ModuleManifest(manifest);
+            string manifestPath = Path.Combine(moduleInfo.Path.FullName, string.Format("{0}.Manifest.xml", moduleInfo.Id));
+            //XElement manifest = XElement.Load(manifestPath); // may need to go into the element itself
+            moduleInfo.Manifest = new ModuleManifest(manifestPath);
         }
 
         //private string resovlePath(string moduleId)

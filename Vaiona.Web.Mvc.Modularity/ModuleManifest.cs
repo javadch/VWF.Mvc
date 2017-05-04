@@ -10,6 +10,13 @@ namespace Vaiona.Web.Mvc.Modularity
     public class ModuleManifest
     {
         private XElement xManifest; //maybe not needed
+
+        public ModuleManifest(string manifestPath):
+            this(XElement.Load(manifestPath))
+        {
+            // nothing is needed.
+        }
+
         public ModuleManifest(XElement manifestElement)
         {
             xManifest = manifestElement;
