@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -51,14 +52,12 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             if (HostingEnvironment.InClientBuildManager)
                 return;
-            // it is possible that the module list and statuses are fetched from a catalog file. 
-            // for now each folder in the Areas folder means a potential module
             XElement catalog = XElement.Load(Path.Combine(AppConfiguration.WorkspaceModulesRoot, "Modules.Catalog.xml"));
-            var activeModules = from m in catalog.Elements("Module")
-                                where (m.Attribute("status").Value.Equals("Active", StringComparison.InvariantCultureIgnoreCase)
-                                        || m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
-                                      )
-                                select m;
+            List<string> validStates = new List<string>() { "Active", "Inactive", "Pending" };
+            var activeModules = catalog.Elements("Module")
+                                .Where(m => validStates.Any(p => p.Equals(m.Attribute("status").Value, StringComparison.InvariantCultureIgnoreCase)))
+                                .ToList();
+
             foreach (var moduleEntry in activeModules)
             //foreach (var moduleDir in areasFolder.GetDirectories())
             {

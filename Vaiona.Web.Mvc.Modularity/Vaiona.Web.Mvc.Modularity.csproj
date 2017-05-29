@@ -72,6 +72,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="InterModuleComm.cs" />
     <Compile Include="ModularMvcRouteHandler.cs" />
     <Compile Include="ModuleBase.cs" />
     <Compile Include="ModuleInfo.cs" />

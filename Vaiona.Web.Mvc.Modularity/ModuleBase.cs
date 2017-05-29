@@ -27,6 +27,7 @@ namespace Vaiona.Web.Mvc.Modularity
             load(moduleId);
             RegisterModuleRoute("default", DefaultRoute);
         }
+
         private void load(string moduleId)
         {
             var moduleInfo = ModuleManager.ModuleInfos.Where(p => p.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();

@@ -65,6 +65,7 @@ namespace Vaiona.Web.Mvc.Modularity
         }
 
         private static string shellManifestPath;
+
         public static void RegisterShell(string shellManifestPath)
         {
             ModuleManager.shellManifestPath = shellManifestPath;
@@ -90,7 +91,7 @@ namespace Vaiona.Web.Mvc.Modularity
                             
             foreach (var moduleId in moduleIds)
             {
-                if (IsActive(moduleId))
+                if (IsActive(moduleId) && IsLoaded(moduleId))
                 {
                     // take the export entries, add an attribute: moduleId = value to them, and
                     // add them to proper node based on their tag and extends attribute
@@ -225,6 +226,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 catalog = XElement.Load(stream);
             }
         }
+
         private static void onCatalogChanged(object source, FileSystemEventArgs e)
         {
             loadCatalog();
@@ -273,8 +275,8 @@ namespace Vaiona.Web.Mvc.Modularity
                 throw new System.Exception(string.Format("The submited file is not valid. Operation aborted."));
 
             var fileName = Path.GetFileName(bundle.FileName);
-            moduleName = fileName.Substring(0, fileName.IndexOf("."));
-            moduleVersion = fileName.Substring(fileName.IndexOf(".") + 1, (fileName.LastIndexOf(".") - fileName.IndexOf(".") - 1));
+            moduleName = fileName.Substring(0, fileName.IndexOf("_"));
+            moduleVersion = fileName.Substring(fileName.IndexOf("_") + 1, (fileName.LastIndexOf(".") - fileName.IndexOf("_") - 1));
 
             path = installationPath;
             if (!Directory.Exists(path))
@@ -335,7 +337,10 @@ namespace Vaiona.Web.Mvc.Modularity
 
         public static void Uninstall(string moduleId)
         {
-
+            // it is supposed to be a two phase process. 
+            // call the module's Shutdown, then Uninstall methods
+            // mark the module as pendingUninstall and remove whatever possible
+            // on the app startup first remove all the files and unregister if from catalog
         }
 
         public static bool IsActive(XElement moduleElement)
@@ -354,6 +359,27 @@ namespace Vaiona.Web.Mvc.Modularity
             //     return false;
             // return IsActive(mElement);
             return (isActive != null ? isActive.FirstOrDefault() : false);
+        }
+
+        /// <summary>
+        /// Determines whether module <paramref name="moduleId"/> is loaded.
+        /// </summary>
+        /// <param name="moduleId">The module's identifier</param>
+        /// <returns></returns>
+        public static bool IsLoaded(string moduleId)
+        {
+            return moduleInfos.Count(m => m.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase) && m.Plugin != null) > 0;
+        }
+
+        /// <summary>
+        /// Detemines whether module <paramref name="moduleId"/> is installed, regardless of its status.
+        /// </summary>
+        /// <param name="moduleId">The module's identifier</param>
+        /// <returns></returns>
+        public static bool Exists(string moduleId)
+        {
+            bool exists = catalog.Elements("Module").Any(entry => entry.Attribute("id").Value.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase));
+            return exists;
         }
 
         public static void Disable(string moduleId, bool updateCatalog = true)
@@ -432,11 +458,6 @@ namespace Vaiona.Web.Mvc.Modularity
             return manifest;
         }
 
-        public static bool IsModuleLoaded(string moduleId)
-        {
-            return moduleInfos.Count(m => m.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase) && m.Plugin != null) > 0;
-        }
-
         public static void CacheAssembly(string assemblyName, Assembly assembly)
         {
             if (!moduleAssemblyCache.ContainsKey(assemblyName))
@@ -461,14 +482,14 @@ namespace Vaiona.Web.Mvc.Modularity
 
             string asmName = new AssemblyName(args.Name).Name;
 
-            var moduleIfo = ModuleInfos
+            var moduleInfo = ModuleInfos
                 .Where(x => (x.EntryType.Assembly.FullName.Equals(asmName, StringComparison.InvariantCultureIgnoreCase))
                 //&& (x.Manifest.IsEnabled == true) // check the catalog
                 )
                 .FirstOrDefault();
-            if (moduleIfo != null)
+            if (moduleInfo != null && IsActive(moduleInfo.Id) && IsLoaded(moduleInfo.Id))
             {
-                return moduleIfo.EntryType.Assembly;
+                return moduleInfo.EntryType.Assembly;
             }
 
             // check the module cache
@@ -498,6 +519,7 @@ namespace Vaiona.Web.Mvc.Modularity
         /// <param name="updateIfExists">Determines weather the entry should be updated if it already exists. Otherwise an exception is thrown.</param>
         private static void registerModule(string moduleId, string status = "pending", int order = 0, bool updateIfExists = true)
         {
+            int currentOrder = -1;
             var cachedCatalog = catalog;
             XElement catalogEntry = cachedCatalog.Elements("Module")
                                       .Where(x => x.Attribute("id").Value.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase))
@@ -510,22 +532,31 @@ namespace Vaiona.Web.Mvc.Modularity
                 }
                 else // detach the entry so that the rest of the algorithm functions properly.
                 {
+                    if (order > 0) // value is provided and update flag is on!
+                    {
+                        currentOrder = (order > 0 && order <= moduleInfos.Count) ? order : moduleInfos.Count + 1;
+                    }
+                    else
+                    {
+                        currentOrder = int.Parse(catalogEntry.Attribute("order").Value);
+                    }
                     catalogEntry.Remove();
                 }
             }
             // either the module does not exist, or it is detached from the list to be updated
-            if (catalogEntry == null) // the module does not exist in the catalog
+            if (catalogEntry == null) // the module does not exist in catalog
             {
                 catalogEntry = new XElement("Module");
+                currentOrder = (order > 0 && order <= moduleInfos.Count) ? order : moduleInfos.Count + 1;
             }
 
             // set/update the entry's attributes
             catalogEntry.SetAttributeValue("id", moduleId);
             catalogEntry.SetAttributeValue("status", status);
-            catalogEntry.SetAttributeValue("order", order > 0 ? order : moduleInfos.Count + 1); // by default it is set to the end.
+            catalogEntry.SetAttributeValue("order", currentOrder); // by default it is set to the end.
 
             // update the order attribute of the other modules
-            foreach (var entry in cachedCatalog.Elements("Module").Where(x => int.Parse(x.Attribute("order").Value) >= order && order > 0))
+            foreach (var entry in cachedCatalog.Elements("Module").Where(x => int.Parse(x.Attribute("order").Value) >= currentOrder))
             {
                 entry.SetAttributeValue("order", int.Parse(entry.Attribute("order").Value) + 1);
             }
@@ -551,8 +582,7 @@ namespace Vaiona.Web.Mvc.Modularity
         private static void copyBundleElements(string moduleName, string moduleVersion, string installationPath, bool installForProduction = true)
         {
             //throw new NotImplementedException();
-            string zipPath = Path.Combine(installationPath, moduleName + "." + moduleVersion + ".zip");
-            var zip = ZipFile.Read(zipPath);
+            string zipPath = Path.Combine(installationPath, moduleName + "_" + moduleVersion + ".zip");
             string tempPath = Path.Combine(installationPath, moduleName, moduleVersion);
             try
             {
@@ -573,10 +603,14 @@ namespace Vaiona.Web.Mvc.Modularity
             }
             try
             {
-                zip.ExtractAll(tempPath);
+                using (var zip = ZipFile.Read(zipPath)) // to release the file handle after extraction
+                {
+                    zip.ExtractAll(tempPath);
+                }
             }
             catch (Exception ex)
             {
+                cleanUpInstallation(moduleName, moduleVersion, installationPath);
                 throw new Exception(string.Format("Could not unzip bundle {0} to directory {1}. {2}", moduleName, tempPath, ex.Message));
             }
 
@@ -597,6 +631,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 }
                 catch (Exception ex)
                 {
+                    cleanUpInstallation(moduleName, moduleVersion, installationPath);
                     throw new Exception(string.Format("Could not delete directoty {0}. {1}", moduleWorkspace, ex.Message));
                 }
                 try
@@ -605,12 +640,13 @@ namespace Vaiona.Web.Mvc.Modularity
                 }
                 catch (Exception ex)
                 {
+                    cleanUpInstallation(moduleName, moduleVersion, installationPath);
                     throw new Exception(string.Format("Could not move the bundle's worspace to {0}. {1}", moduleWorkspace, ex.Message));
                 }
                 // move whatever else that needs to go to a place other than the module's root
 
                 // move whatever is remained to the module's root. This should include bin, Content, Scripts, and Views folder plus the manifest file.
-                string moduleDepolymentPath = Path.Combine(ModuleManager.DeploymentRoot, moduleName, moduleVersion); // the version is ONLY for testing purpose. must be removed!
+                string moduleDepolymentPath = Path.Combine(ModuleManager.DeploymentRoot, moduleName); 
                 try
                 {
                     if (Directory.Exists(moduleDepolymentPath))
@@ -618,6 +654,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 }
                 catch (Exception ex)
                 {
+                    cleanUpInstallation(moduleName, moduleVersion, installationPath);
                     throw new Exception(string.Format("Could not delete directoty {0}. {1}", moduleDepolymentPath, ex.Message));
                 }
                 try
@@ -629,6 +666,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 }
                 catch (Exception ex)
                 {
+                    cleanUpInstallation(moduleName, moduleVersion, installationPath);
                     throw new Exception(string.Format("Could not move the bundle's binaries to {0}. {1}", moduleDepolymentPath, ex.Message));
                 }
             }
@@ -637,12 +675,19 @@ namespace Vaiona.Web.Mvc.Modularity
 
         private static void cleanUpInstallation(string moduleName, string moduleVersion, string installationPath)
         {
-            // delete the temprary module folder created during installation
-            Directory.GetDirectories(installationPath, moduleName).ToList()
-                .ForEach(p => Directory.Delete(p, true));
-            // delete the uploaded zip bundle
-            Directory.GetFiles(installationPath, string.Format("{0}.*.zip", moduleName)).ToList()
-                .ForEach(p => File.Delete(p));
+            try { 
+                // delete the uploaded zip bundle
+                Directory.GetFiles(installationPath, string.Format("{0}_*.zip", moduleName)).ToList()
+                    .ForEach(p => File.Delete(p));
+                // delete the temprary module folder created during installation
+                //Directory.GetDirectories(installationPath, moduleName).ToList()
+                //    .ForEach(p => Directory.Delete(p, true));
+                Directory.Delete(Path.Combine(installationPath, moduleName), true);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Could not cleanup bundle {0}. {1}", moduleName, ex.Message));
+            }
         }
 
         private static void validateBundle(string moduleName, string moduleVersion, string installationPath)
@@ -656,7 +701,8 @@ namespace Vaiona.Web.Mvc.Modularity
                 Version incomingVersion = new Version(moduleVersion);
                 if (exisitingVersion >= incomingVersion)
                 {
-                    throw new Exception(string.Format("A higher version of the '{0}' module is already installed.", moduleName));
+                    cleanUpInstallation(moduleName, moduleVersion, installationPath);
+                    throw new Exception(string.Format("A higher or equal version of the '{0}' module is already installed. Operation aborted.", moduleName));
                 }
             }
             // check if the declaraed dependecies are already available. module/version

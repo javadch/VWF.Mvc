@@ -386,6 +386,7 @@ namespace Vaiona.PersistenceProviders.NH
         /// <param name="dialect">The specific DBMS dialect to be used in the current configuration</param>
         /// <param name="componentOrModulePath">if module: this is the root folder of all the modules. if component, the root folder containing all the components</param>
         /// <param name="post">holds a reference to the post installation files compiled from merging of the PostObjects folder of the fallback and dialect folders</param>
+        /// <param name="isModule">Determines whether the folder contains modules or components. False means: components.</param>
         private void registerMappings(Configuration cfg, string fallbackFoler, string dialect, string componentOrModulePath, ref Dictionary<string, List<FileInfo>> post, bool isModule=false)
         {
             if (!Directory.Exists(componentOrModulePath))
@@ -393,19 +394,29 @@ namespace Vaiona.PersistenceProviders.NH
             DirectoryInfo rootDir = new DirectoryInfo(componentOrModulePath);
             foreach (DirectoryInfo moduleOrComponentDir in rootDir.GetDirectories())
             {
-                List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
-                mappingFiles.ForEach(p => cfg.AddFile(p));
-                // double check, maybe it is not needed
                 if (isModule) // its is module, so the module's entity container assembly should also be added
                 {
-                    var asmElement = ModuleManager.GetModuleInfo(moduleOrComponentDir.Name.ToLower())
-                                        .Manifest.ManifestDoc.Element("Assemblies").Elements("Assmebly")
-                                        .Where(p => p.Attribute("role").Value.Equals("Entity", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
-                    if(asmElement != null && !string.IsNullOrWhiteSpace(asmElement.Attribute("name").Value))
+                    string moduleId = moduleOrComponentDir.Name.ToLower();
+                    if (ModuleManager.Exists(moduleId))
                     {
-                        Assembly asm = Assembly.Load(asmElement.Attribute("name").Value);
-                        cfg.AddAssembly(asm);
+                        List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
+                        mappingFiles.ForEach(p => cfg.AddFile(p));
+                        var asmElement = ModuleManager.GetModuleInfo(moduleOrComponentDir.Name.ToLower())
+                                            .Manifest.ManifestDoc.Element("Assemblies").Elements("Assmebly")
+                                            .Where(p => p.Attribute("role").Value.Equals("Entity", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                        if (asmElement != null && !string.IsNullOrWhiteSpace(asmElement.Attribute("name").Value))
+                        {
+                            Assembly asm = Assembly.Load(asmElement.Attribute("name").Value);
+                            cfg.AddAssembly(asm);
+                        }
+
                     }
+                }
+                else // its a component, load the mapping files unconditionally.
+                {
+                    List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
+                    mappingFiles.ForEach(p => cfg.AddFile(p));
+
                 }
             }
         }
