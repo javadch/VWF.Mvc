@@ -54,7 +54,18 @@ namespace Vaiona.Persistence.Api
         /// rolls back all the changes but keeps the transaction open (by beginning a new one) in order to UoW to remain usable.
         /// </summary>
         void Ignore();
-        
+
+        /// <summary>
+        /// Executes a named query that returns ay most a single result.
+        /// This command is designed to operate at a level upper than the entities and 
+        /// is meant to be used for checking existance, creating DDL objects, etc.
+        /// </summary>
+        /// <typeparam name="T">The scalar data type of the return value. In most of the cases it is Boolean or Integer.</typeparam>
+        /// <param name="queryName">Query name as in the ORM mappings</param>
+        /// <param name="parameters">A dictionary of parameter name/values to be passed to the query.</param>
+        /// <returns></returns>
+        T Execute<T>(string queryName, Dictionary<string, object> parameters = null);
+        T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null);
         event EventHandler BeforeCommit;
         event EventHandler AfterCommit;
 

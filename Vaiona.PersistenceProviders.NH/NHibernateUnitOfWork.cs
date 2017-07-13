@@ -6,6 +6,7 @@ using NHibernate;
 using Vaiona.Persistence.Api;
 using NHibernate.Context;
 using System.Web;
+using System.Diagnostics.Contracts;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -80,6 +81,10 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 this.Conversation.Restart(this);
             }
+            else
+            {
+                this.Conversation.End(this);
+            }
         }
 
         //public void CommitAndContinue()
@@ -114,6 +119,10 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 this.Conversation.Restart(this);
             }
+            else
+            {
+                this.Conversation.End(this);
+            }
         }
 
         //public void IgnoreAndContinue()
@@ -121,6 +130,72 @@ namespace Vaiona.PersistenceProviders.NH
         //    Ignore();
         //    this.session.Transaction.Begin();
         //}
+
+        public T Execute<T>(string queryName, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+
+            T result = default(T);
+            ISession session = this.Conversation.GetSession();
+            try
+            {
+                //session.BeginTransaction();
+                IQuery query = session.GetNamedQuery(queryName);
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+                result = query.UniqueResult<T>();
+                //session.Transaction.Commit();
+            }
+            catch
+            {
+                //session.Transaction.Rollback();
+                throw new Exception(string.Format("Failed for execute named query '{0}'.", queryName));
+            }
+            finally
+            {
+                // Do Nothing
+            }
+            return result;
+        }
+
+        public T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+
+            T result = default(T);
+            ISession session = this.Conversation.GetSession();
+            try
+            {
+                //session.BeginTransaction();
+                IQuery query = session.CreateSQLQuery(queryString);
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+                result = query.UniqueResult<T>();
+                //session.Transaction.Commit();
+            }
+            catch
+            {
+                //session.Transaction.Rollback();
+                throw new Exception(string.Format("Failed for execute the submitted native query."));
+            }
+            finally
+            {
+                // Do Nothing
+            }
+            return result;
+        }
 
         private bool isDisposed = false;
         ~NHibernateUnitOfWork()
