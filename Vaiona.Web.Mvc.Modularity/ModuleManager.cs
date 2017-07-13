@@ -437,6 +437,7 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             if (moduleInfos.Count(p => p.Id.Equals(moduleMetadata.Id, StringComparison.InvariantCultureIgnoreCase)) > 0)
                 return;
+			moduleMetadata.Manifest = loadManifest(moduleMetadata.Id);
             moduleInfos.Add(moduleMetadata);
             // add the current module's exports to the ModuleManager export ExportTree.
             //buildModuleExportTree(moduleMetadata.Id);
@@ -453,9 +454,7 @@ namespace Vaiona.Web.Mvc.Modularity
             if (moduleInfo != null && moduleInfo.Manifest != null)
                 return moduleInfo.Manifest;
             
-            string manifestPath = Path.Combine(ModuleManager.DeploymentRoot, moduleId, string.Format("{0}.Manifest.xml", moduleId));
-            ModuleManifest manifest = new ModuleManifest(manifestPath);
-            return manifest;
+			return loadManifest(moduleId);
         }
 
         public static void CacheAssembly(string assemblyName, Assembly assembly)
@@ -721,6 +720,13 @@ namespace Vaiona.Web.Mvc.Modularity
                 .FirstOrDefault();
             return entry;
         }
+		
+		private static ModuleManifest loadManifest(string moduleId)
+		{
+			string manifestPath = Path.Combine(ModuleManager.DeploymentRoot, moduleId, string.Format("{0}.Manifest.xml", moduleId));
+            ModuleManifest manifest = new ModuleManifest(manifestPath);
+            return manifest;
+		}
     }
 
 }
