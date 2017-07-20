@@ -482,7 +482,7 @@ namespace Vaiona.Web.Mvc.Modularity
             string asmName = new AssemblyName(args.Name).Name;
 
             var moduleInfo = ModuleInfos
-                .Where(x => (x.EntryType.Assembly.FullName.Equals(asmName, StringComparison.InvariantCultureIgnoreCase))
+                .Where(x => (x.EntryType.Assembly.GetName().Name.Equals(asmName, StringComparison.InvariantCultureIgnoreCase))
                 //&& (x.Manifest.IsEnabled == true) // check the catalog
                 )
                 .FirstOrDefault();
@@ -491,10 +491,9 @@ namespace Vaiona.Web.Mvc.Modularity
                 return moduleInfo.EntryType.Assembly;
             }
 
-            // check the module cache
-            string asmNameEx = asmName + ".dll";
-            if (moduleAssemblyCache.ContainsKey(asmNameEx))
-                return moduleAssemblyCache[asmNameEx];
+            // check the module cache            
+            if (moduleAssemblyCache.ContainsKey(asmName))
+                return moduleAssemblyCache[asmName];
 
             throw new Exception(string.Format("Unable to load assembly {0}", asmName));
         }

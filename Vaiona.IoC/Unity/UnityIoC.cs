@@ -6,14 +6,15 @@ using Microsoft.Practices.Unity;
 using System.Configuration;
 using Microsoft.Practices.Unity.Configuration;
 using System.Web;
+using System.Reflection;
 
 namespace Vaiona.IoC.Unity
 {
     public class UnityIoC : IoCContainer
     {
-        private const string sessionKey = "SessionLevelContainer";
-        IUnityContainer container = null;
-        List<UnityIoC> children = new List<UnityIoC>();
+        private IUnityContainer container = null;
+        private Dictionary<string, UnityIoC> children = new Dictionary<string, UnityIoC>();
+        private Dictionary<Type, object> instances = new Dictionary<Type, object>();
 
         public UnityIoC(IUnityContainer container)
         {
@@ -29,9 +30,15 @@ namespace Vaiona.IoC.Unity
 
             container = new UnityContainer();
             container.LoadConfiguration(section, containerName);
+        }
 
-            //container = new UnityContainer();
-            //container.LoadConfiguration(containerName);
+        public void StartSessionLevelContainer()
+        {
+            string key = HttpContext.Current.Session.SessionID;
+            if (this.children.ContainsKey(key))
+                return;
+            UnityIoC child = new UnityIoC(container.CreateChildContainer());
+            children.Add(key, child);
         }
 
         public object Resolve(Type t)
@@ -43,20 +50,6 @@ namespace Vaiona.IoC.Unity
         {
             return container.IsRegistered(t, name);
         }
-        //public IEnumerable<object> ResolveAll(Type t)
-        //{
-        //    IEnumerable<object> objects = container.ResolveAll(t);
-        //    foreach (var item in children)
-        //    {
-        //        objects.Union(item.container.ResolveAll(t));
-        //    }
-        //    return (objects);
-        //}
-
-        //public object Resolve<T>()
-        //{
-        //    return (container.Resolve<T>());
-        //}
 
         public T Resolve<T>()
         {
@@ -73,32 +66,11 @@ namespace Vaiona.IoC.Unity
             return container.IsRegistered<T>(name);
         }
 
-        //public IEnumerable<T> ResolveAll<T>()
-        //{
-        //    IEnumerable<T> objects = container.ResolveAll<T>();
-        //    foreach (var item in children)
-        //    {
-        //        objects.Union(item.container.ResolveAll<T>());
-        //    }
-        //    return (objects);
-        //}
-
-        public void StartSessionLevelContainer()
-        {
-            UnityIoC child = new UnityIoC(container.CreateChildContainer());
-            children.Add(child);
-            HttpContext.Current.Session[sessionKey] = child;
-        }
-
         public void ShutdownSessionLevelContainer()
         {
-            UnityIoC child = null;
-            try
-            {
-                child = HttpContext.Current.Session[sessionKey] as UnityIoC;
-                children.Remove(child);
-            }
-            catch { child = null; } // when the session is timed out, it happens that the Session object is not available anymore
+            string key = HttpContext.Current.Session.SessionID;
+            if (this.children.ContainsKey(key))
+                children.Remove(key);
         }
 
         public void Teardown(object obj)
@@ -106,16 +78,35 @@ namespace Vaiona.IoC.Unity
             container.Teardown(obj);
         }
 
-        public object ResolveForSession<T>()
+        public T ResolveForSession<T>()
         {
-            object o = (HttpContext.Current.Session[sessionKey] as IoCContainer).Resolve<T>();
-            return (o);
+            string key = HttpContext.Current.Session.SessionID;
+            if (this.children.ContainsKey(key))
+            {
+                UnityIoC child = this.children[key];
+                try
+                {
+                    T o = child.container.Resolve<T>();
+                    return (o);
+                }
+                catch (Exception ex)
+                {
+                    return default(T);
+                }
+            }
+            return default(T);
         }
 
         public object ResolveForSession(Type t)
         {
-            object o = (HttpContext.Current.Session[sessionKey] as IoCContainer).Resolve(t);
-            return (o);
+            string key = HttpContext.Current.Session.SessionID;
+            if (this.children.ContainsKey(key))
+            {
+                IoCContainer container = this.children[key];
+                object o = container.Resolve(t);
+                return (o);
+            }
+            return null;
         }
     }
 }

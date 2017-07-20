@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 
 namespace Vaiona.IoC
 {
@@ -21,7 +22,7 @@ namespace Vaiona.IoC
         
         void StartSessionLevelContainer();
         void ShutdownSessionLevelContainer();
-        object ResolveForSession<T>();
+        T ResolveForSession<T>();
         object ResolveForSession(Type t);
     }
 }

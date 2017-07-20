@@ -7,6 +7,9 @@ using Vaiona.Persistence.Api;
 using NHibernate.Context;
 using System.Web;
 using System.Diagnostics.Contracts;
+using System.Data;
+using System.Data.Common;
+using System.Data.SqlClient;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -184,6 +187,115 @@ namespace Vaiona.PersistenceProviders.NH
                 // Do Nothing
             }
             return result;
+        }
+
+        public int ExecuteNonQuery(string queryString, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+            int result = 0;
+            try
+            {
+                using (ITransaction transaction = this.Session.BeginTransaction())
+                {
+                    IDbCommand command = this.Session.Connection.CreateCommand();
+                    command.Connection = this.Session.Connection;
+
+                    transaction.Enlist(command);
+
+                    command.CommandText = queryString;
+                    if (parameters != null)
+                    {
+                        foreach (var item in parameters)
+                        {
+                            command.Parameters.Add(new SqlParameter(item.Key, item.Value));
+                        }
+                    }
+                    command.ExecuteNonQuery();
+
+                    transaction.Commit();
+                }
+            }
+            catch
+            {
+                //session.Transaction.Rollback();
+                throw new Exception(string.Format("Failed for execute the submitted native query."));
+            }
+            finally
+            {
+                // Do Nothing
+            }
+            return result;
+        }
+
+        public object ExecuteScalar(string queryString, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+            object result = null;
+            try
+            {
+                using (ITransaction transaction = this.Session.BeginTransaction())
+                {
+                    IDbCommand command = this.Session.Connection.CreateCommand();
+                    command.Connection = this.Session.Connection;
+
+                    transaction.Enlist(command);
+
+                    command.CommandText = queryString;
+                    if (parameters != null)
+                    {
+                        foreach (var item in parameters)
+                        {
+                            command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic one
+                        }
+                    }
+                    result = command.ExecuteScalar();
+
+                    transaction.Commit();
+                }
+            }
+            catch
+            {
+                //session.Transaction.Rollback();
+                throw new Exception(string.Format("Failed for execute the submitted native query."));
+            }
+            finally
+            {
+                // Do Nothing
+            }
+            return result;
+        }
+
+        public DataTable ExecuteQuery(string queryString, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+            DataTable table = new DataTable();
+            try
+            {
+                using (var con = new SqlConnection(this.Session.Connection.ConnectionString))
+                {
+                    using (var cmd = new SqlCommand(queryString, con))
+                    {
+                        using (var adapter = new SqlDataAdapter(cmd))
+                        {
+                            cmd.CommandType = CommandType.Text;
+                            adapter.Fill(table);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                //session.Transaction.Rollback();
+                throw new Exception(string.Format("Failed for execute the submitted native query."));
+            }
+            finally
+            {
+                // Do Nothing
+            }
+            return table;
         }
 
         private bool isDisposed = false;

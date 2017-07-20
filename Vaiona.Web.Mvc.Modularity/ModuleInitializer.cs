@@ -91,6 +91,8 @@ namespace Vaiona.Web.Mvc.Modularity
                 var assemblyName = moduleBinFolder.GetFiles(assemblyNamePattern, SearchOption.TopDirectoryOnly)
                                                     .Select(x => AssemblyName.GetAssemblyName(x.FullName))
                                                     .FirstOrDefault();
+                if (assemblyName == null)
+                    throw new Exception(string.Format("Could not find assembly '{0}' for module '{1}' in '{2}'.", assemblyName.FullName, moduleDir, moduleBinFolder.FullName));
 
                 var asm = Assembly.Load(assemblyName);
                 // check for for a class that inherits from the ModuleBase class
@@ -144,20 +146,21 @@ namespace Vaiona.Web.Mvc.Modularity
                     foreach (var xAsm in xAssemblies)
                     {
                         string asmName = xAsm.Attribute("fullName").Value;
-                        asmName = asmName.EndsWith(".dll") ? asmName : asmName + ".dll";
-                        if (moduleBinFolder.GetFiles(asmName, SearchOption.TopDirectoryOnly).Count() == 1)                                           
+
+                        string assemblyNamePattern = string.Format("{0}.dll", asmName);
+                        var assemblyName = moduleBinFolder.GetFiles(assemblyNamePattern, SearchOption.TopDirectoryOnly)
+                                                            .Select(x => AssemblyName.GetAssemblyName(x.FullName))
+                                                            .FirstOrDefault();
+                        if (assemblyName == null)
+                            break; // should throw an exception!
+                        var asm = Assembly.Load(assemblyName);
+                        //Add the plugin's satellite assembly as a reference to the application
+                        try
                         {
-                            var asm = Assembly.LoadFrom(Path.Combine(moduleBinFolder.FullName, asmName));
-                            //Add the plugin's satellite assembly as a reference to the application
-                            try
-                            {
-                                //BuildManager.AddReferencedAssembly(asm);
-                            }
-                            catch (Exception)
-                            { // it is aleady added
-                            }
-                            ModuleManager.CacheAssembly(asmName, asm);
+                            BuildManager.AddReferencedAssembly(asm);
                         }
+                        catch { } // it is already added
+                        ModuleManager.CacheAssembly(asmName, asm);
                     }
                 }
                 catch (Exception ex)

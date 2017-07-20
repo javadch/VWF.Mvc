@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 
@@ -66,6 +67,10 @@ namespace Vaiona.Persistence.Api
         /// <returns></returns>
         T Execute<T>(string queryName, Dictionary<string, object> parameters = null);
         T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null);
+        int ExecuteNonQuery(string queryString, Dictionary<string, object> parameters = null);
+        object ExecuteScalar(string queryString, Dictionary<string, object> parameters = null);
+        DataTable ExecuteQuery(string queryString, Dictionary<string, object> parameters = null);
+
         event EventHandler BeforeCommit;
         event EventHandler AfterCommit;
 
