@@ -116,7 +116,7 @@ namespace Vaiona.Web.Mvc.Modularity
                         } catch(Exception)
                         { // it is aleady added
                         }
-                        ModuleManager.CacheAssembly(assemblyName.Name + ".dll", asm);
+                        ModuleManager.CacheAssembly(assemblyName.Name, asm);
                         moduleMetadata.Path = moduleDir;
                         //Add the modules to the PluginManager to manage them later
                         ModuleManager.Add(moduleMetadata);
