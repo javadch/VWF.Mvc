@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AreaAttribute.cs" />
+    <Compile Include="BaseController.cs" />
     <Compile Include="CollectionHelper.cs" />
     <Compile Include="Data\DoesNotNeedDataAccess.cs" />
     <Compile Include="Data\PersistenceContextProviderAttribute.cs" />

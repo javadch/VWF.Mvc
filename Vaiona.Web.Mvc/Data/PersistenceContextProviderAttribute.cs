@@ -39,7 +39,7 @@ namespace Vaiona.Web.Mvc.Data
             //    return;
 
             // conversations are managed per request, which means one conversation is created and torn down per MVC action
-            // this mechanism does not support conversation per web session! if that scenario is needed the right way is not move StartConversation and Shutdown/ EndConversation methods
+            // this mechanism does not support conversation per web session! if that scenario is needed the right way is to move StartConversation and Shutdown/ EndConversation methods
             // to Session_Start and Session_End respectively. The scenario is not tested, though!
             pManager.StartConversation();
             base.OnActionExecuting(filterContext);
