@@ -483,8 +483,12 @@ namespace Vaiona.Utils.Cfg
 
         public static bool TryGetCurrentUser(ref string userName)
         {
-            userName = AppConfiguration.HttpContext.User.Identity.Name; // Thread.CurrentPrincipal.Identity.Name; 
-            return (Thread.CurrentPrincipal.Identity.IsAuthenticated); //Thread.CurrentPrincipal.Identity.IsAuthenticated
+            try
+            {
+                userName = AppConfiguration.HttpContext.User.Identity.Name; // Thread.CurrentPrincipal.Identity.Name; 
+                return (Thread.CurrentPrincipal.Identity.IsAuthenticated); //Thread.CurrentPrincipal.Identity.IsAuthenticated
+            }
+            catch { return false; }
         }
 
         internal static IPrincipal createUser(string userName, string roleName)

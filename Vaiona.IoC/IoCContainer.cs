@@ -9,6 +9,10 @@ namespace Vaiona.IoC
     public interface IoCContainer
     {
         object Resolve(Type t);
+
+        void RegisterHeirarchical(Type from, Type to);
+        void Register(Type from, Type to);
+
         bool IsRegistered(Type t, string name);
         //IEnumerable<object> ResolveAll(Type t);
 

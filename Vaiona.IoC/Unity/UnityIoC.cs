@@ -41,14 +41,24 @@ namespace Vaiona.IoC.Unity
             children.Add(key, child);
         }
 
-        public object Resolve(Type t)
+        public void RegisterHeirarchical(Type from, Type to)
         {
-            return (container.Resolve(t));
+            this.container.RegisterType(from, to, new HierarchicalLifetimeManager());
+        }
+
+        public void Register(Type from, Type to)
+        {
+            this.container.RegisterType(from, to, new TransientLifetimeManager());
         }
 
         public bool IsRegistered(Type t, string name)
         {
             return container.IsRegistered(t, name);
+        }
+
+        public object Resolve(Type t)
+        {
+            return (container.Resolve(t));
         }
 
         public T Resolve<T>()
