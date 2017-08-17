@@ -5,11 +5,16 @@ using System.Text;
 using Vaiona.Entities.Logging;
 using Vaiona.Utils.Cfg;
 using System.Diagnostics;
+using Vaiona.Logging.Loggers;
 
 namespace Vaiona.Logging
 {
     public class LoggerFactory
     {
+        public static ILogger GetFileLogger()
+        {
+            return FileLogger.GetInstance();
+        }
         /// <summary>
         /// based on configuration info and provided logType, choose one of the concrete loggers, 
         /// search for the specific logType (e.g., Performance.Logging), then for General (General.Logging), and then for the no named registration in the IoC            
@@ -17,15 +22,22 @@ namespace Vaiona.Logging
         /// </summary>
         /// <param name="LogType"></param>
         /// <returns></returns>
-        private static ILogger create(LogType LogType)
+        private static ILogger create(LogType LogType, string loggerType = "DB")
         {
-            string loggerKey = string.Format("{0}.Logging", LogType);
-            if(IoC.IoCFactory.Container.IsRegistered<ILogger>(loggerKey))
-                return IoC.IoCFactory.Container.Resolve<ILogger>(loggerKey);
-            loggerKey = "General.Logging";
-            if (IoC.IoCFactory.Container.IsRegistered<ILogger>(loggerKey))
-                return IoC.IoCFactory.Container.Resolve<ILogger>(loggerKey);
-            return IoC.IoCFactory.Container.Resolve<ILogger>();            
+            if (loggerType.Equals("DB"))
+            {
+                string loggerKey = string.Format("{0}.Logging", LogType);
+                if (IoC.IoCFactory.Container.IsRegistered<ILogger>(loggerKey))
+                    return IoC.IoCFactory.Container.Resolve<ILogger>(loggerKey);
+                loggerKey = "General.Logging";
+                if (IoC.IoCFactory.Container.IsRegistered<ILogger>(loggerKey))
+                    return IoC.IoCFactory.Container.Resolve<ILogger>(loggerKey);
+                return IoC.IoCFactory.Container.Resolve<ILogger>();
+            } else if (loggerType.Equals("FILE"))
+            {
+                return FileLogger.GetInstance();
+            }
+            else { return null; }
         }
 
         private static LogEntry refineLogEntry(LogEntry logEntry)

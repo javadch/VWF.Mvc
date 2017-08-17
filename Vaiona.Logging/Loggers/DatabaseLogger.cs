@@ -49,5 +49,19 @@ namespace Vaiona.Logging.Loggers
                 unit.Commit();
             }
         }
+
+        public void LogCustom(string message)
+        {
+            CustomLogEntry logEntry = new CustomLogEntry();
+            logEntry.LogType = LogType.Custom;
+            logEntry.Desription = message;
+
+            using (IUnitOfWork unit = pManager.CreateIsolatedUnitOfWork(false, true, false, null, null, null, null))
+            {
+                IRepository<CustomLogEntry> repo = unit.GetRepository<CustomLogEntry>();
+                repo.Put(logEntry);
+                unit.Commit();
+            }
+        }
     }
 }

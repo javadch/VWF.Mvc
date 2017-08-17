@@ -12,5 +12,6 @@ namespace Vaiona.Logging
         void LogData(DataLogEntry logEntry);
         void LogRelation(RelationLogEntry logEntry);
         void LogCustom(CustomLogEntry logEntry);
+        void LogCustom(string message);
     }
 }
