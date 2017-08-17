@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Xml.Linq;
+using Vaiona.Logging;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
@@ -22,10 +23,14 @@ namespace Vaiona.Web.Mvc.Modularity
         private Dictionary<string, Route> moduleRoutes = new Dictionary<string, Route>();
         public Dictionary<string, Route> ModuleRoutes { get { return moduleRoutes; } }
         public ModuleInfo Metadata { get; set; }
+        private string moduleId = "";
         public ModuleBase(string moduleId)
         {
+            this.moduleId = moduleId;
+            LoggerFactory.GetFileLogger().LogCustom(string.Format("Instantiating module '{0}'", moduleId));
             load(moduleId);
             RegisterModuleRoute("default", DefaultRoute);
+            LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfuly instantiated.", moduleId));
         }
 
         private void load(string moduleId)
@@ -33,15 +38,26 @@ namespace Vaiona.Web.Mvc.Modularity
             var moduleInfo = ModuleManager.ModuleInfos.Where(p => p.Id.Equals(moduleId, StringComparison.InvariantCultureIgnoreCase)).SingleOrDefault();
             if (moduleInfo == null)
             {
-                throw new Exception(string.Format("{0} module could not be loaded."));
+                string message = string.Format("Module '{0}' is not loaded by the module manager. Instantiating the module was aborted!", moduleId);
+                LoggerFactory.GetFileLogger().LogCustom(message);
+                throw new Exception(message);
             }
 
             moduleInfo.Plugin = this;
             this.Metadata = moduleInfo;
             // load the manifest file
-            string manifestPath = Path.Combine(moduleInfo.Path.FullName, string.Format("{0}.Manifest.xml", moduleInfo.Id));
-            //XElement manifest = XElement.Load(manifestPath); // may need to go into the element itself
-            moduleInfo.Manifest = new ModuleManifest(manifestPath);
+            try
+            {
+                string manifestPath = Path.Combine(moduleInfo.Path.FullName, string.Format("{0}.Manifest.xml", moduleInfo.Id));
+                //XElement manifest = XElement.Load(manifestPath); // may need to go into the element itself
+                moduleInfo.Manifest = new ModuleManifest(manifestPath);
+            }
+            catch (Exception ex)
+            {
+                string message = string.Format("Could not load the manifest file for module '{0}'. Details: {1}", moduleId, ex.Message);
+                LoggerFactory.GetFileLogger().LogCustom(message);
+                throw new Exception(message);
+            }
         }
 
         //private string resovlePath(string moduleId)
@@ -91,20 +107,33 @@ namespace Vaiona.Web.Mvc.Modularity
         /// </remarks>
         public override void RegisterArea(AreaRegistrationContext context)
         {
-            this.context = context;
-            context.Routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
-            // the route handler associated with the route objects check for module status
-            //if (!PluginManager.IsActive(this.Name))
-            //    return; // do not register thr routes
-            foreach (var routeItem in moduleRoutes)
+            LoggerFactory.GetFileLogger().LogCustom(string.Format("Registering the area for module '{0}'...", moduleId));
+
+            try
             {
-                context.MapRoute(
-                    routeItem.Key,
-                    routeItem.Value.Url, routeItem.Value.Defaults
-                //AreaName + "/{controller}/{action}/{id}",
-                //new { action = "Index", id = UrlParameter.Optional }
-                ).RouteHandler = routeItem.Value.RouteHandler;// new ModularMvcRouteHandler(AreaName);
+                this.context = context;
+                context.Routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+                // the route handler associated with the route objects check for module status
+                //if (!PluginManager.IsActive(this.Name))
+                //    return; // do not register thr routes
+                foreach (var routeItem in moduleRoutes)
+                {
+                    context.MapRoute(
+                        routeItem.Key,
+                        routeItem.Value.Url, routeItem.Value.Defaults
+                    //AreaName + "/{controller}/{action}/{id}",
+                    //new { action = "Index", id = UrlParameter.Optional }
+                    ).RouteHandler = routeItem.Value.RouteHandler;// new ModularMvcRouteHandler(AreaName);
+                }
+                LoggerFactory.GetFileLogger().LogCustom(string.Format("The area for module '{0}' was successfuly registered.", moduleId));
             }
+            catch (Exception ex)
+            {
+                string message = string.Format("Could not register the area for module '{0}'. It throws exception: {1}", moduleId, ex.Message);
+                LoggerFactory.GetFileLogger().LogCustom(message);
+                throw new Exception(message);
+            }
+
         }
 
         public Route DefaultRoute

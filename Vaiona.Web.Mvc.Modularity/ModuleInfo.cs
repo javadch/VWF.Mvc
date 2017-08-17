@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,6 +17,8 @@ namespace Vaiona.Web.Mvc.Modularity
         public Type EntryType { get; set; }
 
         public ModuleBase Plugin { get; set; }
+
+        public Assembly Assembly { get; set; }
 
     }
 }

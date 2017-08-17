@@ -12,6 +12,9 @@ using System.Xml.Linq;
 using Vaiona.Utils.Cfg;
 using Vaiona.Utils.IO;
 using Ionic.Zip;
+using Vaiona.Logging;
+using System.Web.Mvc;
+using System.Web.Http;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
@@ -66,11 +69,63 @@ namespace Vaiona.Web.Mvc.Modularity
 
         private static string shellManifestPath;
 
-        public static void RegisterShell(string shellManifestPath)
+        public static void InitModules(string shellManifestPath, object state)
         {
             ModuleManager.shellManifestPath = shellManifestPath;
+            // this is the starting point of geting modules registered
+            // at the time of this call, the PluginInitilizer has already loaded the plug-ins. this call causes the module entry points to be instantiated.
+            foreach (var module in moduleInfos) // may need to be restricted to active/pending ones!
+            {
+                var instance = initModule(module, state);
+                //module.Plugin = instance; // not needed, it is done in the ModuleBase.load method
+            }
+            //AreaRegistration.RegisterAllAreas(state);
         }
 
+
+        private static ModuleBase initModule(ModuleInfo module, object state)
+        {
+            string message = "";
+            Type entryPointType = module.EntryType;
+            try
+            {
+                if (entryPointType == null && module.Assembly != null)
+                {
+                    entryPointType = module.Assembly.GetTypes().Where(p =>
+                                            typeof(AreaRegistration).IsAssignableFrom(p)                    // should be subclass of AreaRegistration
+                                            && typeof(ModuleBase).IsAssignableFrom(p)                       // should be subcalss of ModuleBase
+                                            && p.GetConstructor(Type.EmptyTypes) != (ConstructorInfo)null   // should have a paramterless ctor
+                                            ).FirstOrDefault();
+                }
+
+                if (entryPointType != null)
+                {
+                    AreaRegistration ar = ((AreaRegistration)Activator.CreateInstance(entryPointType));
+
+                    AreaRegistrationContext arc = new AreaRegistrationContext(module.Id, RouteTable.Routes, state);
+                    string @namespace = entryPointType.Namespace;
+                    if (@namespace != null)
+                    {
+                        arc.Namespaces.Add(@namespace + ".*");
+                    }
+                    ar.RegisterArea(arc);
+                    return ar as ModuleBase;
+                }
+                else
+                {
+                    message = string.Format("Could not find the entry point type for module '{0}'. Each module should have a class that is a subtype of 'ModuleBase'.", module.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                //message = string.Format("Can not create an object of type '{0}' for module '{1}'.", entryPointType, module.Id);
+                message = string.Format("An exception was thrown while instantiating '{2}', which is the entry point of module '{0}'. Details: {1}", module.Id, ex.Message, entryPointType);
+            }
+            // should not reach here!!
+            LoggerFactory.GetFileLogger().LogCustom(message);
+            throw new Exception(message);
+
+        }
         /// <summary>
         /// Creates the Shell's export items, Placeholders for other menu items that will be coming from the modules, and 
         /// provides the tag space for the menu locations.
@@ -491,21 +546,48 @@ namespace Vaiona.Web.Mvc.Modularity
                 return moduleInfo.EntryType.Assembly;
             }
 
-            // check the module cache            
+            // check the module cache for assemblies that are registered by the modules' manifests.
             if (moduleAssemblyCache.ContainsKey(asmName))
                 return moduleAssemblyCache[asmName];
 
-            throw new Exception(string.Format("Unable to load assembly {0}", asmName));
+            string message = string.Format("Unable to resolve assembly '{0}'.", asmName);
+            LoggerFactory.GetFileLogger().LogCustom(message);
+            //throw new Exception(message);
+            return null;
         }
 
         public static void StartModules()
         {
-            moduleInfos.ForEach(module => module.Plugin.Start());
+            foreach (var module in moduleInfos)
+            {
+                if (module != null && module.Plugin != null)
+                {
+                    module.Plugin.Start();
+                }
+                else
+                {
+                    string message = string.Format("Unable to start module '{0}'. It has no active instance!", module.Id);
+                    LoggerFactory.GetFileLogger().LogCustom(message);
+                    throw new Exception(message);
+                }
+            }
         }
 
         public static void ShutdownModules()
         {
-            moduleInfos.ForEach(module => module.Plugin.Shutdown());
+            foreach (var module in moduleInfos)
+            {
+                if(module != null && module.Plugin != null)
+                {
+                    module.Plugin.Shutdown();
+                }
+                else
+                {
+                    string message = string.Format("Unable to shutdown module '{0}'. It has no active instance!", module.Id);
+                    LoggerFactory.GetFileLogger().LogCustom(message);
+                    throw new Exception(message);
+                }
+            }
         }
 
         /// <summary>
