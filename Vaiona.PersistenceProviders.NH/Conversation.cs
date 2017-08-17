@@ -98,7 +98,7 @@ namespace Vaiona.PersistenceProviders.NH
             if (!stSession.Transaction.IsActive)
                 stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             if (showQueries)
-                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + stSession.GetHashCode());
+                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was started. ID: " + stSession.GetHashCode());
             this.session = null;
             statefull = false;
         }
@@ -126,6 +126,8 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void End(IUnitOfWork uow)
         {
+            if (session == null || uow == null)
+                return;
             if (statefull)
             {
                 if (!attachedUnits.ContainsKey(session) || !attachedUnits[session].Contains(uow))
@@ -133,6 +135,7 @@ namespace Vaiona.PersistenceProviders.NH
                 unRegisterUnit(session, uow); // remove the UoW from the list of conversation observers
                 if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
                 {
+                    NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
                     endSession();
                 }
             }
@@ -198,7 +201,7 @@ namespace Vaiona.PersistenceProviders.NH
         {
             try
             {
-                if (session.Transaction != null && session.Transaction.IsActive)
+                if (session != null && session.Transaction != null && session.Transaction.IsActive)
                 {
                     if (commitTransaction)
                     {
@@ -226,8 +229,8 @@ namespace Vaiona.PersistenceProviders.NH
                 if (showQueries)
                     Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
                 session.Dispose();
-                GC.Collect();
                 session = null;
+                GC.Collect();
             }
         }
 

@@ -32,6 +32,15 @@ namespace Vaiona.PersistenceProviders.NH
             //this.Session = this.Conversation.GetSession();
         }
 
+#if DEBUG
+        public ISession Session
+        {
+            get
+            {
+                return this.Conversation.GetSession();
+            }
+        }
+#else
         internal ISession Session
         {
             get
@@ -39,6 +48,8 @@ namespace Vaiona.PersistenceProviders.NH
                 return this.Conversation.GetSession();
             }
         }
+#endif
+
         public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>(Vaiona.Persistence.Api.CacheMode cacheMode = Vaiona.Persistence.Api.CacheMode.Ignore) where TEntity : class
         {
             IReadOnlyRepository<TEntity> repo = new NHibernateReadonlyRepository<TEntity>(this, cacheMode);
@@ -83,10 +94,10 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 this.Conversation.Restart(this);
             }
-            else
-            {
-                this.Conversation.End(this);
-            }
+            //else
+            //{
+            //    this.Conversation.End(this); //this is done by the end of UoW visibility scope, during Dispose.
+            //}
         }
 
         //public void CommitAndContinue()
@@ -121,10 +132,6 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 this.Conversation.Restart(this);
             }
-            else
-            {
-                this.Conversation.End(this);
-            }
         }
 
         //public void IgnoreAndContinue()
@@ -135,7 +142,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public T Execute<T>(string queryName, Dictionary<string, object> parameters = null)
         {
-            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+            if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
             T result = default(T);
@@ -168,7 +175,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null)
         {
-            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+            if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
             T result = default(T);
@@ -200,8 +207,8 @@ namespace Vaiona.PersistenceProviders.NH
         }
 
         public int ExecuteNonQuery(string queryString, Dictionary<string, object> parameters = null)
-        {
-            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+        {            
+            if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
             int result = 0;
             try
@@ -240,7 +247,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public object ExecuteScalar(string queryString, Dictionary<string, object> parameters = null)
         {
-            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+            if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
             object result = null;
             try
@@ -279,7 +286,7 @@ namespace Vaiona.PersistenceProviders.NH
 
         public DataTable ExecuteQuery(string queryString, Dictionary<string, object> parameters = null)
         {
-            if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
+            if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
             DataTable table = new DataTable();
             try
@@ -339,6 +346,8 @@ namespace Vaiona.PersistenceProviders.NH
         }
         private void disposeResources()
         {
+            if (Session == null)
+                return;
             if (autoCommit & !Session.Transaction.WasCommitted)
                 this.Commit();
             else

@@ -15,7 +15,7 @@ namespace Vaiona.PersistenceProviders.NH
     public class NHibernateCurrentSessionProvider : ICurrentSessionContext
     {
         private readonly ISessionFactoryImplementor _factory;
-        private const string CURRENT_SESSION_CONTEXT_KEY = "NHibernateCurrentSessionFactory";
+        public const string CURRENT_SESSION_CONTEXT_KEY = "NHibernateCurrentSessionFactory";
 
         public NHibernateCurrentSessionProvider(ISessionFactoryImplementor factory)
         {
@@ -60,7 +60,9 @@ namespace Vaiona.PersistenceProviders.NH
             if (!map.ContainsKey(sessionFactory))
                 return null;
             var sessionInitializer = map[sessionFactory];
-            map[sessionFactory] = null;
+            map[sessionFactory] = null; // dereference the session object
+            map.Remove(sessionFactory); // remove the map entry
+            FactoryMapInContext = map;  // update the httpcontxt
             if (sessionInitializer == null || !sessionInitializer.IsValueCreated)
                 return null;
             return sessionInitializer.Value;

@@ -22,7 +22,7 @@ namespace Vaiona.PersistenceProviders.NH
         private static ISessionFactory sessionFactory;
         private static Configuration cfg;
         //private static string configFile = "";
-
+        
         public object Factory { get { return sessionFactory; } }
 
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
@@ -335,8 +335,8 @@ namespace Vaiona.PersistenceProviders.NH
         {
             var session = sessionFactory.OpenSession(cfg.Interceptor);
             session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
-            if (showQueries)
-                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + session.GetHashCode());
+            //if (showQueries)
+            //    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was strted. ID: " + session.GetHashCode());
             return session;
         }
 
