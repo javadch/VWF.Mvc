@@ -20,7 +20,7 @@ namespace Vaiona.Web.HttpModules
             context.BeginRequest += ContextBeginRequest;
             context.EndRequest += ContextEndRequest;
             context.Error += ContextError;
-            pManager = PersistenceFactory.GetPersistenceManager();
+            //pManager = PersistenceFactory.GetPersistenceManager();
         }
 
         private void ContextBeginRequest(object sender, EventArgs e)
@@ -29,7 +29,7 @@ namespace Vaiona.Web.HttpModules
             {
                 return;
             }
-            pManager.StartConversation();
+            //pManager.StartConversation();
         }
 
         private void ContextEndRequest(object sender, EventArgs e)
@@ -38,12 +38,12 @@ namespace Vaiona.Web.HttpModules
             {
                 return;
             }
-            pManager.ShutdownConversation();
+            //pManager.ShutdownConversation();
         }
 
         private void ContextError(object sender, EventArgs e)
         {
-            pManager.EndContext();
+            //pManager.EndContext();
         }
 
         public void Dispose() { }

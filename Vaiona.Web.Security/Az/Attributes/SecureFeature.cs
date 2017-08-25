@@ -216,7 +216,7 @@ namespace Vaiona.Web.Security.Az.Attributes
             IPersistenceManager persistenceManager = PersistenceFactory.GetPersistenceManager();
             
             List<AccessRuleEntity> rules;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IReadOnlyRepository<AccessRuleEntity> accessRuleRepo = uow.GetReadOnlyRepository<AccessRuleEntity>();
                 rules = accessRuleRepo.Get(p => subKeys.Contains(p.SecurityKey) && p.SecurityObjectType == SecurityObjectType.Feature)

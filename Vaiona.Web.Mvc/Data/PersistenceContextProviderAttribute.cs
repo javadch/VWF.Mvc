@@ -28,31 +28,31 @@ namespace Vaiona.Web.Mvc.Data
 
         public PersistenceContextProviderFilterAttribute()
         {
-            pManager = PersistenceFactory.GetPersistenceManager();
+            //pManager = PersistenceFactory.GetPersistenceManager();
         }
 
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
-                return;
+            //if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
+            //    return;
             //if (filterContext.IsChildAction)
             //    return;
 
             // conversations are managed per request, which means one conversation is created and torn down per MVC action
             // this mechanism does not support conversation per web session! if that scenario is needed the right way is to move StartConversation and Shutdown/ EndConversation methods
             // to Session_Start and Session_End respectively. The scenario is not tested, though!
-            pManager.StartConversation();
+            //pManager.StartConversation();
             base.OnActionExecuting(filterContext);
         }
 
         public override void OnActionExecuted(ActionExecutedContext filterContext)
         {
-            if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
-                return;
-            if (AppConfiguration.AutoCommitTransactions)
-                pManager.EndConversation();
-            else
-                pManager.ShutdownConversation();
+            //if (filterContext.ActionDescriptor.GetCustomAttributes(typeof(DoesNotNeedDataAccess), true).Count() > 0)
+            //    return;
+            //if (AppConfiguration.AutoCommitTransactions)
+                //pManager.EndConversation();
+            //else
+                //pManager.ShutdownConversation();
             base.OnActionExecuted(filterContext);
         }
 
@@ -68,7 +68,7 @@ namespace Vaiona.Web.Mvc.Data
 
         public void OnException(ExceptionContext filterContext)
         {
-            pManager.ShutdownConversation();
+            //pManager.ShutdownConversation();
             //pManager.EndContext();
         }
     }

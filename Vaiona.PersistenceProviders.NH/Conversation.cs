@@ -18,35 +18,41 @@ namespace Vaiona.PersistenceProviders.NH
         private Configuration cfg;
         private bool showQueries = false;
         private bool commitTransaction = false;
-        ISession session = null;
-        IStatelessSession stSession = null;
-        bool statefull = true;
-        bool alive = false;
-        public Conversation(ISessionFactory sessionFactory, Configuration cfg, bool commitTransaction = false, bool showQueries = false)
+        private TypeOfUnitOfWork type = TypeOfUnitOfWork.Normal;
+        private ISession session = null;
+        private IStatelessSession stSession = null;
+        private bool statefull = true;
+
+        public Conversation(ISessionFactory sessionFactory, Configuration cfg, TypeOfUnitOfWork type = TypeOfUnitOfWork.Normal, bool commitTransaction = false, bool showQueries = false)
         {
             this.sessionFactory = sessionFactory;
             this.cfg = cfg;
-            this.showQueries = showQueries;
+            this.type = type;
             this.commitTransaction = commitTransaction;
+            this.showQueries = showQueries;
+
+            switch (type)
+            {
+                case TypeOfUnitOfWork.Normal: // obtain a stateful session from the current session provide
+                    this.session = getAmbientSession(true);
+                    statefull = true;
+                    stSession = null;
+                    break;
+                case TypeOfUnitOfWork.Isolated: // create a stateful session
+                    this.session = createSession(sessionFactory);
+                    statefull = true;
+                    stSession = null;
+                    break;
+                case TypeOfUnitOfWork.Bulk: // create a stateless session
+                    this.stSession = createStatelessSession(sessionFactory);
+                    statefull = false;
+                    session = null;
+                    break;
+                default:
+                    break;
+            }
         }
 
-        public Conversation(ISession session, ISessionFactory sessionFactory, Configuration cfg, bool commitTransaction = false, bool showQueries = false)
-            : this(sessionFactory, cfg, commitTransaction, showQueries)
-        {
-            this.session = session;
-            alive = true;
-            statefull = true;
-            stSession = null;
-        }
-
-        public Conversation(IStatelessSession session, ISessionFactory sessionFactory, Configuration cfg, bool commitTransaction = false, bool showQueries = false)
-            : this(sessionFactory, cfg, commitTransaction, showQueries)
-        {
-            this.stSession = session;
-            alive = true;
-            statefull = false;
-            session = null;
-        }
         public bool IsStatefull()
         {
             return statefull;
@@ -68,123 +74,70 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void Start(IUnitOfWork uow)
         {
-            if (!alive && this.session == null)
+            int sessionCode = 0;
+            switch (type)
             {
-                session = sessionFactory.OpenSession(cfg.Interceptor);
-                alive = true;
+                case TypeOfUnitOfWork.Normal: // add the uow to the observers of the current conversation, so that at closing time, the conversation is disposed with the last uow
+                    registerUnit(session, uow);
+                    if (!AppConfiguration.CacheQueryResults)
+                        session.CacheMode = NHibernate.CacheMode.Ignore;
+                    else
+                        session.CacheMode = NHibernate.CacheMode.Normal;
+                    if (!session.Transaction.IsActive)
+                        session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                    sessionCode = session.GetHashCode();
+                    break;
+                case TypeOfUnitOfWork.Isolated: // single conversation per uow
+                    if (!AppConfiguration.CacheQueryResults)
+                        session.CacheMode = NHibernate.CacheMode.Ignore;
+                    else
+                        session.CacheMode = NHibernate.CacheMode.Normal;
+                    if (!session.Transaction.IsActive)
+                        session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                    sessionCode = session.GetHashCode();
+                    break;
+                case TypeOfUnitOfWork.Bulk: // single conversation per uow
+                    if (!stSession.Transaction.IsActive)
+                        stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                    sessionCode = stSession.GetHashCode();
+                    break;
+                default:
+                    break;
             }
-            // if uow is already there, its a wrong call pattern! a unit of work is trying to start the conversation more than once!!
-            registerUnit(session, uow);
-            if (!AppConfiguration.CacheQueryResults)
-                session.CacheMode = NHibernate.CacheMode.Ignore;
-            else
-                session.CacheMode = NHibernate.CacheMode.Normal;
-            if (!session.Transaction.IsActive)
-                session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+
             if (showQueries)
-                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + session.GetHashCode());
-            stSession = null;
-        }
-
-        public void StartStateless(IUnitOfWork uow)
-        {
-            if (!alive && this.stSession == null)
-            {
-                stSession = sessionFactory.OpenStatelessSession();
-                alive = true;
-            }
-            // if uow is already there, its a wrong call pattern! a unit of work is trying to start the conversation more than once!!
-            registerUnit(stSession, uow);
-            if (!stSession.Transaction.IsActive)
-                stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
-            if (showQueries)
-                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was started. ID: " + stSession.GetHashCode());
-            this.session = null;
-            statefull = false;
-        }
-
-        public void Restart(IUnitOfWork uow)
-        {
-            if(statefull)
-            {
-                if (!attachedUnits[session].Contains(uow)) // UoW is not listed so not allowd to restart
-                    return; //maybe an exception would be better
-                if (session == null)
-                    this.Start(uow);
-                session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
-            }
-            else
-            {
-                if (!attachedUnits[stSession].Contains(uow)) // UoW is not listed so not allowd to restart
-                    return; //maybe an exception would be better
-                if (stSession == null)
-                    this.StartStateless(uow);
-                stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
-            }
-
+                Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + sessionCode);
         }
 
         public void End(IUnitOfWork uow)
         {
-            if (session == null || uow == null)
-                return;
-            if (statefull)
+            switch (type)
             {
-                if (!attachedUnits.ContainsKey(session) || !attachedUnits[session].Contains(uow))
-                    return; // the UoW is not authorized to end the conversation
-                unRegisterUnit(session, uow); // remove the UoW from the list of conversation observers
-                if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
-                {
-                    NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
+                case TypeOfUnitOfWork.Normal: // add the uow to the observers of the current conversation, so that at closing time, the conversation is disposed with the last uow
+                    if (session == null || uow == null)
+                        return;
+                    if (!attachedUnits.ContainsKey(session) || !attachedUnits[session].Contains(uow))
+                        return; // the UoW is not authorized to end the conversation
+                    unRegisterUnit(session, uow); // remove the UoW from the list of conversation observers
+                    if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
+                    {
+                        NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
+                        endSession();
+                    }
+                    break;
+                case TypeOfUnitOfWork.Isolated: // single conversation per uow
+                    if (session == null || uow == null)
+                        return;
                     endSession();
-                }
-            }
-            else
-            {
-                if (!attachedUnits.ContainsKey(stSession) || !attachedUnits[session].Contains(uow))
-                    return; // the UoW is not authorized to end the conversation
-                unRegisterUnit(stSession, uow); // remove the UoW from the list of conversation observers
-                if (!attachedUnits.ContainsKey(stSession)) // there is no observer, so it's safe to close and collect the session/ resources
-                {
+                    break;
+                case TypeOfUnitOfWork.Bulk: // single conversation per uow
+                    if (stSession == null || uow == null)
+                        return;
                     endStatelessSession();
-                }
+                    break;
+                default:
+                    break;
             }
-        }
-
-        public void Terminate()
-        {
-            if (statefull)
-            {
-                if (!attachedUnits.ContainsKey(session))
-                    return;
-                attachedUnits.Remove(session); // remove the session and all its UoWs
-                if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
-                {
-                    endSession();
-                }
-            }
-            else
-            {
-                if (!attachedUnits.ContainsKey(stSession))
-                    return; 
-                attachedUnits.Remove(stSession); 
-                if (!attachedUnits.ContainsKey(stSession)) // there is no observer, so it's safe to close and collect the session/ resources
-                {
-                    endStatelessSession();
-                }
-            }
-        }
-
-        public static void Dereference(object session)
-        {
-            attachedUnits.Remove(session); // remove the session and all its UoWs
-            //if (session is ISession)
-            //{
-
-            //} else if(session is IStatelessSession)
-            //{
-
-            //}
         }
 
         public void Clear(bool applyChanages = false)
@@ -195,6 +148,42 @@ namespace Vaiona.PersistenceProviders.NH
                     session.Flush();
                 session.Clear();
             }
+        }
+
+        private ISession getAmbientSession(bool openIfNeeded)
+        {
+            ISession session = null;
+            try
+            {
+                session = sessionFactory.GetCurrentSession();
+            }
+            catch
+            { }
+            if (!openIfNeeded) // Maybe no session is available, this returns null if no ambient session is available.
+                return session;
+            if (session == null)
+            {   //start a new session
+                var sessionInitilizer = new Lazy<ISession>(() => createSession(sessionFactory));
+                NHibernateCurrentSessionProvider.Bind(sessionInitilizer, sessionFactory);
+                // try get the session after starting a new conversation
+                session = sessionFactory.GetCurrentSession();
+            }
+            //this flush mode will flush on manual flushes and when transactions are committed.
+            session.FlushMode = FlushMode.Commit;
+            return (session);
+        }
+
+        private ISession createSession(ISessionFactory sessionFactory)
+        {
+            var session = sessionFactory.OpenSession(cfg.Interceptor);
+            //session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+            return session;
+        }
+
+        private IStatelessSession createStatelessSession(ISessionFactory sessionFactory)
+        {
+            IStatelessSession session = sessionFactory.OpenStatelessSession(); // No interceptor can be passed!
+            return session;
         }
 
         private void endSession()
@@ -213,7 +202,7 @@ namespace Vaiona.PersistenceProviders.NH
                         catch (Exception ex)
                         {
                             session.Transaction.Rollback();
-                            throw new Exception("There were some changes submitted to the system, but could not be committed!", ex);
+                            throw new Exception("There were some changes submitted to the system that could not be committed!", ex);
                         }
                     }
                     else
@@ -226,7 +215,7 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 if (session.IsOpen)
                     session.Close();
-                if (showQueries)
+                if (showQueries) // do this befoire disposing the session and setting it to null
                     Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
                 session.Dispose();
                 session = null;
@@ -238,7 +227,7 @@ namespace Vaiona.PersistenceProviders.NH
         {
             try
             {
-                if (stSession.Transaction != null && stSession.Transaction.IsActive)
+                if (stSession != null && stSession.Transaction != null && stSession.Transaction.IsActive)
                 {
                     if (commitTransaction)
                     {
@@ -250,7 +239,7 @@ namespace Vaiona.PersistenceProviders.NH
                         catch (Exception ex)
                         {
                             stSession.Transaction.Rollback();
-                            throw new Exception("There were some changes submitted to the system, but could not be committed!", ex);
+                            throw new Exception("There were some changes submitted to the system that could not be committed!", ex);
                         }
                     }
                     else

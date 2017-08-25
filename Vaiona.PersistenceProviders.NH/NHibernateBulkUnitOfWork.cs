@@ -15,20 +15,18 @@ namespace Vaiona.PersistenceProviders.NH
 {
     public class NHibernateBulkUnitOfWork: IUnitOfWork
     {
-        internal IStatelessSession Session = null;
+        internal Conversation Conversation = null;
         private bool autoCommit = false;
         private bool throwExceptionOnError = true;
-        private bool allowMultipleCommit = true;
 
         public IPersistenceManager PersistenceManager { get; internal set; }
-        internal NHibernateBulkUnitOfWork(NHibernatePersistenceManager persistenceManager, IStatelessSession session, bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false)
+        internal NHibernateBulkUnitOfWork(NHibernatePersistenceManager persistenceManager, Conversation conversation, bool autoCommit = false, bool throwExceptionOnError = true)
         {
             this.PersistenceManager = persistenceManager;
             this.autoCommit = autoCommit;
             this.throwExceptionOnError = throwExceptionOnError;
-            this.allowMultipleCommit = allowMultipleCommit;
-            this.Session = session;
-            this.Session.Transaction.Begin();
+            this.Conversation = conversation;
+            this.Conversation.Start(this);
         }
 
         public IReadOnlyRepository<TEntity> GetReadOnlyRepository<TEntity>(Vaiona.Persistence.Api.CacheMode cacheMode = Vaiona.Persistence.Api.CacheMode.Ignore) where TEntity : class
@@ -48,6 +46,13 @@ namespace Vaiona.PersistenceProviders.NH
             //Session.
         }
 
+        public IStatelessSession Session
+        {
+            get
+            {
+                return this.Conversation.GetStatelessSession();
+            }
+        }
 
         public void Commit()
         {
@@ -70,23 +75,9 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 //session.Transaction.Rollback(); //??
                 if (throwExceptionOnError)
-                    throw;
+                    throw ex;
             }
-            if (allowMultipleCommit && !this.Session.Transaction.IsActive)
-            {
-                this.Session.Transaction.Begin();
-            }
-            //else
-            //{
-            //    Session.Close();
-            //}
         }
-
-        //public void CommitAndContinue()
-        //{
-        //    Commit();
-        //    this.session.Transaction.Begin();
-        //}
 
         public void Ignore()
         {
@@ -99,7 +90,6 @@ namespace Vaiona.PersistenceProviders.NH
                     Session.Transaction.Rollback();
                     if (Session.Transaction.WasRolledBack)
                     {
-                        // log
                         if (AfterIgnore != null)
                             AfterIgnore(this, EventArgs.Empty);
                     }
@@ -108,11 +98,7 @@ namespace Vaiona.PersistenceProviders.NH
             catch (Exception ex)
             {
                 if (throwExceptionOnError)
-                    throw;
-            }
-            if (allowMultipleCommit && !this.Session.Transaction.IsActive)
-            {
-                this.Session.Transaction.Begin();
+                    throw ex;
             }
         }
 
@@ -326,18 +312,18 @@ namespace Vaiona.PersistenceProviders.NH
 
         private void disposeResources()
         {
-            if (autoCommit & !Session.Transaction.WasCommitted)
-                this.Commit();
-            else
-                this.Ignore();
-            //CurrentSessionContext.Unbind(this.Session.SessionFactory);
-            // Do not close the session, as it is usually shared between multiple units of work in a single HTTP request context
-            //if (Session.IsOpen)
-            //    Session.Close();
-            //Session.Dispose();
-            Session = null; // dereference the pointer to the shared session object
-            //HttpContext.Current.Session.Remove("CurrentNHSession");
-            // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
+            try
+            {
+                if (autoCommit & !Session.Transaction.WasCommitted)
+                    this.Commit();
+                else
+                    this.Ignore();
+                this.Conversation.End(this);
+            }catch
+            {
+                // do nothing
+            }
+            // unhook the event handlers appropriately
             BeforeCommit = null;
             AfterCommit = null;
             BeforeIgnore = null;

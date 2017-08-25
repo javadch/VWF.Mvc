@@ -22,12 +22,18 @@ namespace Vaiona.PersistenceProviders.NH
         private static ISessionFactory sessionFactory;
         private static Configuration cfg;
         //private static string configFile = "";
-        
+        private IUnitOfWorkFactory uowFactory;
         public object Factory { get { return sessionFactory; } }
-
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         bool showQueries;
+
+        public IUnitOfWorkFactory UnitOfWorkFactory { get { return uowFactory; } }
+        public NHibernatePersistenceManager()
+        {
+            //uowFactory = new NHibernateUnitOfWorkFactory(this, cfg); // it is populated at start time
+        }
+
         public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries = false)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
@@ -183,13 +189,13 @@ namespace Vaiona.PersistenceProviders.NH
             if (sessionFactory != null)
                 return;
             sessionFactory = cfg.BuildSessionFactory();
-
+            uowFactory = new NHibernateUnitOfWorkFactory(this, cfg);
             Contract.Ensures(sessionFactory != null);
         }
 
         public void Shutdown()
         {
-            EndContext();
+            //EndContext();
             // may need locking for concurrent calls!
             if (sessionFactory != null)
             {
@@ -197,89 +203,6 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
-        public IUnitOfWork CreateUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
-            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
-        {
-            ISession session = getSession();
-            Conversation cnv = new Conversation(session, sessionFactory, cfg, autoCommit, AppConfiguration.ShowQueries);
-            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, cnv, autoCommit, throwExceptionOnError, allowMultipleCommit);
-            u.BeforeCommit += beforeCommit;
-            u.AfterCommit += afterCommit;
-            u.BeforeIgnore += beforeIgnore;
-            u.AfterIgnore += afterIgnore;
-            return (u);
-        }
-
-        public IUnitOfWork CreateIsolatedUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
-            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
-        {
-            //var localFactory = sessionFactory;
-            //ISession session = beginSession(localFactory);
-            Conversation cnv = new Conversation(sessionFactory, cfg, autoCommit, AppConfiguration.ShowQueries);
-            NHibernateUnitOfWork u = new NHibernateUnitOfWork(this, cnv, autoCommit, throwExceptionOnError, allowMultipleCommit);
-            u.BeforeCommit += beforeCommit;
-            u.AfterCommit += afterCommit;
-            u.BeforeIgnore += beforeIgnore;
-            u.AfterIgnore += afterIgnore;
-            return (u);
-        }
-
-        public IUnitOfWork CreateBulkUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false
-            , EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
-        {
-            IStatelessSession session = sessionFactory.OpenStatelessSession();
-            NHibernateBulkUnitOfWork u = new NHibernateBulkUnitOfWork(this, session, autoCommit, throwExceptionOnError, allowMultipleCommit);
-            u.BeforeCommit += beforeCommit;
-            u.AfterCommit += afterCommit;
-            u.BeforeIgnore += beforeIgnore;
-            u.AfterIgnore += afterIgnore;
-            return (u);
-        }
-
-        public object GetCurrentConversation()
-        {
-            return (getSession());
-        }
-
-        public void StartConversation()
-        {
-            foreach (var sessionFactory in getSessionFactories())
-            {
-                var localFactory = sessionFactory;
-                var sessionInitilizer = new Lazy<ISession>(() => beginSession(localFactory));                
-                NHibernateCurrentSessionProvider.Bind(sessionInitilizer, sessionFactory);
-            }
-        }
-
-        public void ShutdownConversation()
-        {
-            foreach (var sessionfactory in getSessionFactories())
-            {
-                //var lazyConversation = new Lazy<Conversation>(() => new Conversation(localFactory, cfg, false, true));
-                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
-                if (session == null) continue;
-                endSession(session, false);
-            }
-        }
-
-        public void EndConversation()
-        {
-            foreach (var sessionfactory in getSessionFactories())
-            {
-                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
-                if (session == null) continue;
-                endSession(session, true);
-            }
-        }
-        public void EndContext()
-        {
-            foreach (var sessionfactory in getSessionFactories())
-            {
-                var session = NHibernateCurrentSessionProvider.UnBind(sessionfactory);
-                if (session == null) continue;
-                endSession(session, false);
-            }
-        }
 
         public int PreferredPushSize
         {
@@ -298,85 +221,6 @@ namespace Vaiona.PersistenceProviders.NH
             //    return "2400";
             return cfg.GetProperty(propertyName);
         }
-        private ISession getSession()
-        {
-            ISession session = null;
-            try
-            {
-                session = sessionFactory.GetCurrentSession();
-            }
-            catch
-            { }
-
-            if (session == null)
-            {   //start a new session
-                StartConversation();
-                // try get the session after starting a new conversation
-                session = sessionFactory.GetCurrentSession();
-            }
-            //this flush mode will flush on manual flushes and when transactions are committed.
-            session.FlushMode = FlushMode.Commit;
-            return (session);
-        }
-
-        /// <summary>
-        /// Retrieves all ISessionFactory instances via IoC
-        /// </summary>
-        private IEnumerable<ISessionFactory> getSessionFactories()
-        {
-            var sessionFactories = new List<ISessionFactory>() { sessionFactory };
-
-            if (sessionFactories == null || !sessionFactories.Any())
-                throw new TypeLoadException("There should be at least one ISessionFactory registered.");
-            return sessionFactories;
-        }
-
-        private ISession beginSession(ISessionFactory sessionFactory)
-        {
-            var session = sessionFactory.OpenSession(cfg.Interceptor);
-            session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
-            //if (showQueries)
-            //    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was strted. ID: " + session.GetHashCode());
-            return session;
-        }
-
-        private void endSession(ISession session, bool commitTransaction = false)
-        {
-            try
-            {
-                if (session.Transaction != null && session.Transaction.IsActive)
-                {
-                    if (commitTransaction)
-                    {
-                        try
-                        {
-                            if(session.IsDirty())
-                                session.Transaction.Commit();
-                        }
-                        catch (Exception ex)
-                        {
-                            session.Transaction.Rollback();
-                            throw new Exception("There were some changes submitted to the system, but could not be committed!", ex);
-                        }
-                    }
-                    else
-                    {
-                        session.Transaction.Rollback();
-                    }
-                }
-            }
-            finally
-            {
-                if (session.IsOpen)
-                    session.Close();
-                if (showQueries)
-                    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
-                Conversation.Dereference(session);
-                session.Dispose();
-                GC.Collect();
-            }
-        }
-
         /// <summary>
         /// Any component dealing with data should have a Db folder in its workspace folder containing the Mappings folder
         /// If the components accesses data through other components' APIs there is no need to provide the mapping again

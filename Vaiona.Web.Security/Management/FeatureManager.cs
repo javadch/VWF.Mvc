@@ -18,7 +18,7 @@ namespace Vaiona.Web.Security.Management
         public int GetRuleCount()
         {
             int count = 0;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 count = repo.Query().Count();
@@ -29,7 +29,7 @@ namespace Vaiona.Web.Security.Management
         public List<AccessRuleEntity> GetRoots()
         {
             List<AccessRuleEntity> nodes = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 nodes = repo.Get(p => p.Parent == null).ToList();
@@ -40,7 +40,7 @@ namespace Vaiona.Web.Security.Management
         public AccessRuleEntity GetRule(Int64 id)
         {
             AccessRuleEntity rule = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 rule = repo.Get(id);
@@ -51,7 +51,7 @@ namespace Vaiona.Web.Security.Management
         public List<AccessRuleEntity> GetRulesHavingRole(string role)
         {
             List<AccessRuleEntity> rules = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 rules = repo.Get(p => p.RuleBody.Contains(role)).ToList();                
@@ -61,7 +61,7 @@ namespace Vaiona.Web.Security.Management
 
         public void UpdateRule(AccessRuleEntity rule)
         {
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 repo.Put(rule);
@@ -71,7 +71,7 @@ namespace Vaiona.Web.Security.Management
 
         public void UpdateRules(List<AccessRuleEntity> rules)
         {
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 repo.Put(rules);
@@ -83,7 +83,7 @@ namespace Vaiona.Web.Security.Management
         {
             List<AccessRuleEntity> nodes = null;
             List<AccessRuleEntity> roots = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 nodes = repo.Get().ToList();
@@ -97,7 +97,7 @@ namespace Vaiona.Web.Security.Management
         public List<AccessRuleEntity> GetSecuritySubTree(Int64 parentId)
         {
             List<AccessRuleEntity> nodes = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 //where item.Parent.Id == parentId || (parentId == null && item.Parent == null)
@@ -120,7 +120,7 @@ namespace Vaiona.Web.Security.Management
             parameters.Add("ruleId", ruleId);
 
             List<AccessRuleEntity> rules = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 rules = repo.Get("GetRuleWithParents", parameters).ToList();
@@ -133,7 +133,7 @@ namespace Vaiona.Web.Security.Management
         public List<AccessRuleEntity> GetSecuritySubTree(Int64? parentId)
         {
             List<AccessRuleEntity> nodes = null;
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
                 //where item.Parent.Id == parentId || (parentId == null && item.Parent == null)
@@ -171,7 +171,7 @@ namespace Vaiona.Web.Security.Management
         private AccessRuleEntity addFeatureToDB(string featureKey, string displayName, AccessRuleEntity parent)
         {
             //IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false);
-            using (IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false))
+            using (IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true))
             {
                 IRepository<AccessRuleEntity> repo = uow.GetRepository<AccessRuleEntity>();
 

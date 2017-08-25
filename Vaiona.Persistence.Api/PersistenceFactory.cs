@@ -25,29 +25,23 @@ namespace Vaiona.Persistence.Api
         public static IUnitOfWork GetUnitOfWork(this object obj)
         {
             IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
-            IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, false);
+            IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateUnitOfWork(false, true);
             return (uow);
         }
 
         public static IUnitOfWork GetBulkUnitOfWork(this object obj)
         {
             IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
-            IUnitOfWork uow = persistenceManager.CreateBulkUnitOfWork(false, true, false);
+            IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateBulkUnitOfWork(false, true);
             return (uow);
         }
 
         public static IUnitOfWork GetIsolatedUnitOfWork(this object obj)
         {
             IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
-            IUnitOfWork uow = persistenceManager.CreateIsolatedUnitOfWork(false, true, false);
+            IUnitOfWork uow = persistenceManager.UnitOfWorkFactory.CreateIsolatedUnitOfWork(false, true);
             return (uow);
         }
 
-        public static IUnitOfWork GetMultipleCommitUnitOfWork(this object obj)
-        {
-            IPersistenceManager persistenceManager = IoCFactory.Container.Resolve<IPersistenceManager>() as IPersistenceManager;
-            IUnitOfWork uow = persistenceManager.CreateUnitOfWork(false, true, true);
-            return (uow);
-        }
     }
 }

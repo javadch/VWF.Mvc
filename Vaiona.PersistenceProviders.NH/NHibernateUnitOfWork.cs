@@ -21,15 +21,13 @@ namespace Vaiona.PersistenceProviders.NH
         internal Conversation Conversation = null;
 
         public IPersistenceManager PersistenceManager { get; internal set; }
-        internal NHibernateUnitOfWork(NHibernatePersistenceManager persistenceManager, Conversation conversation, bool autoCommit = false, bool throwExceptionOnError = true, bool allowMultipleCommit = false)
+        internal NHibernateUnitOfWork(NHibernatePersistenceManager persistenceManager, Conversation conversation, bool autoCommit = false, bool throwExceptionOnError = true)
         {
             this.PersistenceManager = persistenceManager;
             this.autoCommit = autoCommit;
             this.throwExceptionOnError = throwExceptionOnError;
-            this.allowMultipleCommit = allowMultipleCommit;
             this.Conversation = conversation;
             this.Conversation.Start(this);
-            //this.Session = this.Conversation.GetSession();
         }
 
 #if DEBUG
@@ -88,23 +86,9 @@ namespace Vaiona.PersistenceProviders.NH
             {
                 //session.Transaction.Rollback(); //??
                 if (throwExceptionOnError)
-                    throw;
+                    throw ex;
             }
-            if (allowMultipleCommit && !this.Session.Transaction.IsActive)
-            {
-                this.Conversation.Restart(this);
-            }
-            //else
-            //{
-            //    this.Conversation.End(this); //this is done by the end of UoW visibility scope, during Dispose.
-            //}
         }
-
-        //public void CommitAndContinue()
-        //{
-        //    Commit();
-        //    this.session.Transaction.Begin();
-        //}
 
         public void Ignore()
         {
@@ -117,7 +101,6 @@ namespace Vaiona.PersistenceProviders.NH
                     Session.Transaction.Rollback();
                     if (Session.Transaction.WasRolledBack)
                     {
-                        // log
                         if (AfterIgnore != null)
                             AfterIgnore(this, EventArgs.Empty);
                     }
@@ -126,19 +109,9 @@ namespace Vaiona.PersistenceProviders.NH
             catch (Exception ex)
             {
                 if (throwExceptionOnError)
-                    throw;
-            }
-            if (allowMultipleCommit && !this.Session.Transaction.IsActive)
-            {
-                this.Conversation.Restart(this);
+                    throw ex;
             }
         }
-
-        //public void IgnoreAndContinue()
-        //{
-        //    Ignore();
-        //    this.session.Transaction.Begin();
-        //}
 
         public T Execute<T>(string queryName, Dictionary<string, object> parameters = null)
         {
@@ -335,13 +308,19 @@ namespace Vaiona.PersistenceProviders.NH
         {
             // If you need thread safety, use a lock around these  
             // operations, as well as in your methods that use the resource. 
-            if (!isDisposed)
+            try
             {
-                if (disposing)
+                if (!isDisposed)
                 {
-                    disposeResources();
-                    isDisposed = true;
+                    if (disposing)
+                    {
+                        disposeResources();
+                        isDisposed = true;
+                    }
                 }
+            }
+            catch
+            { // do nothing
             }
         }
         private void disposeResources()
@@ -352,16 +331,9 @@ namespace Vaiona.PersistenceProviders.NH
                 this.Commit();
             else
                 this.Ignore();
-            //CurrentSessionContext.Unbind(this.Session.SessionFactory);
-            // Do not close the session, as it is usually shared between multiple units of work in a single HTTP request context
-            //if (Session.IsOpen)
-            //    Session.Close();
-            //Session.Dispose();
+            // Do not close the session, as it is usually shared between multiple units of work in a single HTTP request context. The conversation object takes care of it.
             this.Conversation.End(this);
-            this.Conversation = null;
-            //Session = null; // dereference the pointer to the shared session object
-            //HttpContext.Current.Session.Remove("CurrentNHSession");
-            // http://www.amazedsaint.com/2010/02/top-5-common-programming-mistakes-net.html case 3: unhooking event handlers appropriately after wiring them
+            // unhook the event handlers appropriately
             BeforeCommit = null;
             AfterCommit = null;
             BeforeIgnore = null;

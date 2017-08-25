@@ -64,6 +64,7 @@
     <Compile Include="NHibernateRepository.cs" />
     <Compile Include="NHibernateCurrentSessionProvider.cs" />
     <Compile Include="NHibernateUnitOfWork.cs" />
+    <Compile Include="NHibernateUnitOfWorkFactory.cs" />
     <Compile Include="NHInterceptor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
