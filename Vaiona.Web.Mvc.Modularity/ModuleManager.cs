@@ -103,10 +103,10 @@ namespace Vaiona.Web.Mvc.Modularity
                     AreaRegistration ar = ((AreaRegistration)Activator.CreateInstance(entryPointType));
 
                     AreaRegistrationContext arc = new AreaRegistrationContext(module.Id, RouteTable.Routes, state);
-                    string @namespace = entryPointType.Namespace;
-                    if (@namespace != null)
+                    string nameSpace = entryPointType.Namespace;
+                    if (nameSpace != null)
                     {
-                        arc.Namespaces.Add(@namespace + ".*");
+                        arc.Namespaces.Add(nameSpace + ".*");
                     }
                     ar.RegisterArea(arc);
                     return ar as ModuleBase;
@@ -123,7 +123,8 @@ namespace Vaiona.Web.Mvc.Modularity
             }
             // should not reach here!!
             LoggerFactory.GetFileLogger().LogCustom(message);
-            throw new Exception(message);
+            return null;
+            //throw new Exception(message);
 
         }
         /// <summary>
