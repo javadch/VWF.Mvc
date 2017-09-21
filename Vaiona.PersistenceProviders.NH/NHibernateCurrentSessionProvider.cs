@@ -27,15 +27,14 @@ namespace Vaiona.PersistenceProviders.NH
         /// </summary>
         /// <returns></returns>
         public ISession CurrentSession() {
-            Lazy<ISession> initializer;
+            ISession session;
             var currentSessionFactoryMap = GetCurrentFactoryMap();
             
             if (currentSessionFactoryMap == null ||
-                !currentSessionFactoryMap.TryGetValue(_factory, out initializer)) {
+                !currentSessionFactoryMap.TryGetValue(_factory, out session)) {
                 return null;
             }
-
-            return initializer.Value;
+            return (session);
         }
 
         /// <summary>
@@ -43,9 +42,9 @@ namespace Vaiona.PersistenceProviders.NH
         /// </summary>
         /// <param name="sessionInitializer"></param>
         /// <param name="sessionFactory"></param>
-        public static void Bind(Lazy<ISession> sessionInitializer, ISessionFactory sessionFactory) {
+        public static void Bind(ISession session, ISessionFactory sessionFactory) {
             var map = GetCurrentFactoryMap();
-            map[sessionFactory] = sessionInitializer;
+            map[sessionFactory] = session;
         }
 
         /// <summary>
@@ -59,13 +58,11 @@ namespace Vaiona.PersistenceProviders.NH
             var map = GetCurrentFactoryMap();
             if (!map.ContainsKey(sessionFactory))
                 return null;
-            var sessionInitializer = map[sessionFactory];
+            ISession session = map[sessionFactory];
             map[sessionFactory] = null; // dereference the session object
             map.Remove(sessionFactory); // remove the map entry
             FactoryMapInContext = map;  // update the httpcontxt
-            if (sessionInitializer == null || !sessionInitializer.IsValueCreated)
-                return null;
-            return sessionInitializer.Value;
+            return (session);
         }
 
         /// <summary>
@@ -73,24 +70,24 @@ namespace Vaiona.PersistenceProviders.NH
         /// If there is no map create/store and return a new one.
         /// </summary>
         /// <returns></returns>
-        private static IDictionary<ISessionFactory, Lazy<ISession>> GetCurrentFactoryMap() {
+        private static IDictionary<ISessionFactory, ISession> GetCurrentFactoryMap() {
             var currentFactoryMap = FactoryMapInContext;
 
             if (currentFactoryMap == null) {
-                currentFactoryMap = new Dictionary<ISessionFactory, Lazy<ISession>>();
+                currentFactoryMap = new Dictionary<ISessionFactory, ISession>();
                 FactoryMapInContext = currentFactoryMap;
             }
 
             return currentFactoryMap;
         }
 
-        private static IDictionary<ISessionFactory, Lazy<ISession>> FactoryMapInContext {
+        private static IDictionary<ISessionFactory, ISession> FactoryMapInContext {
             get {
                 if (AppConfiguration.IsWebContext) {
-                    return HttpContext.Current.Items[CURRENT_SESSION_CONTEXT_KEY] as IDictionary<ISessionFactory, Lazy<ISession>>;
+                    return HttpContext.Current.Items[CURRENT_SESSION_CONTEXT_KEY] as IDictionary<ISessionFactory, ISession>;
                 }
                 else {
-                    return CallContext.GetData(CURRENT_SESSION_CONTEXT_KEY) as IDictionary<ISessionFactory, Lazy<ISession>>;
+                    return CallContext.GetData(CURRENT_SESSION_CONTEXT_KEY) as IDictionary<ISessionFactory, ISession>;
                 }
             }
             set {

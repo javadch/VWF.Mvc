@@ -52,35 +52,44 @@ namespace Vaiona.PersistenceProviders.NH
         /// <returns></returns>
         public bool Put(TEntity entity)
         {
-            //session.Lock(entity, LockMode.None);
-            applyStateInfo(entity);
-            applyAuditInfo(entity);
-            //UoW.Session.SaveOrUpdate(entity);
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                ((NHibernateUnitOfWork)UoW).Session.SaveOrUpdate(entity);
-                return true;
+                //session.Lock(entity, LockMode.None);
+                applyStateInfo(entity);
+                applyAuditInfo(entity);
+                //UoW.Session.SaveOrUpdate(entity);
+                if (UoW is NHibernateUnitOfWork)
+                {
+                    ISession session = ((NHibernateUnitOfWork)UoW).Session;
+                    if(!IsTransient(entity))
+                        session.Lock(entity, LockMode.Read);
+                    session.SaveOrUpdate(entity);
+                    return true;
+                }
+                else if (UoW is NHibernateBulkUnitOfWork)
+                {   // check to see whether the entity is a new object to be inserted or an existing one to be updated. 
+                    // the stateless session does not keep track of the entities!
+                    ((NHibernateBulkUnitOfWork)UoW).Session.Insert(entity);
+                    return (true);
+                }
+                return (false);
             }
-            else if (UoW is NHibernateBulkUnitOfWork)
-            {   // check to see whether the entity is a new object to be inserted or an existing one to be updated. 
-                // the stateless session does not keep track of the entities!
-                ((NHibernateBulkUnitOfWork)UoW).Session.Insert(entity);
-                return (true);
-            }
-            return (false);
         }
 
         public bool Put(IEnumerable<TEntity> entities)
         {
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                return putStatefull(((NHibernateUnitOfWork)UoW).Session, entities);
+                if (UoW is NHibernateUnitOfWork)
+                {
+                    return putStatefull(((NHibernateUnitOfWork)UoW).Session, entities);
+                }
+                else if (UoW is NHibernateBulkUnitOfWork)
+                {
+                    return putStateless(((NHibernateBulkUnitOfWork)UoW).Session, entities);
+                }
+                return (false);
             }
-            else if (UoW is NHibernateBulkUnitOfWork)
-            {
-                return putStateless(((NHibernateBulkUnitOfWork)UoW).Session, entities);
-            }
-            return (false);
         }
 
         private bool putStateless(IStatelessSession session, IEnumerable<TEntity> entities)
@@ -105,6 +114,8 @@ namespace Vaiona.PersistenceProviders.NH
                 {
                     applyStateInfo(entity);
                     applyAuditInfo(entity);
+                    if(!IsTransient(entity))
+                        session.Lock(entity, LockMode.Read);
                     session.SaveOrUpdate(entity);
                 }
                 return true;
@@ -114,46 +125,53 @@ namespace Vaiona.PersistenceProviders.NH
 
         public bool Delete(TEntity entity)
         {
-            //UoW.Session.Delete(entity);
-            //return (true);
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                ((NHibernateUnitOfWork)UoW).Session.Delete(entity);
-                return true;
+                if (UoW is NHibernateUnitOfWork)
+                {
+                    ((NHibernateUnitOfWork)UoW).Session.Delete(entity);
+                    return true;
+                }
+                else if (UoW is NHibernateBulkUnitOfWork)
+                {
+                    ((NHibernateBulkUnitOfWork)UoW).Session.Delete(entity);
+                    return (true);
+                }
+                return (false);
             }
-            else if (UoW is NHibernateBulkUnitOfWork)
-            {
-                ((NHibernateBulkUnitOfWork)UoW).Session.Delete(entity);
-                return (true);
-            }
-            return (false);
         }
 
         public bool Delete(IEnumerable<TEntity> entities)
         {
-            foreach (var entity in entities)
+            lock (UoW)
             {
-                //UoW.Session.Delete(entity);
-                if (!Delete(entity))
-                    return false;
+                foreach (var entity in entities)
+                {
+                    //UoW.Session.Delete(entity);
+                    if (!Delete(entity))
+                        return false;
+                }
+                return (true);
             }
-            return (true);
         }
 
         public bool Delete(IEnumerable<Int64> entityIds)
         {
-            try
+            lock (UoW)
             {
-                string queryString = string.Format("DELETE FROM {0} e WHERE e.Id IN (:idsList)", typeof(TEntity).Name);
-                Dictionary<string, object> parameters = new Dictionary<string, object>();
-                parameters.Add("idsList", entityIds);
-                this.Execute(queryString, parameters);
+                try
+                {
+                    string queryString = string.Format("DELETE FROM {0} e WHERE e.Id IN (:idsList)", typeof(TEntity).Name);
+                    Dictionary<string, object> parameters = new Dictionary<string, object>();
+                    parameters.Add("idsList", entityIds);
+                    this.Execute(queryString, parameters);
+                }
+                catch (Exception ex)
+                {
+                    return false;
+                }
+                return (true);
             }
-            catch (Exception ex)
-            {
-                return false;
-            }
-            return (true);
         }
         /// <summary>
         /// Use this only for delete or update in bulk mode
@@ -168,38 +186,41 @@ namespace Vaiona.PersistenceProviders.NH
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            IQuery query = null;
-            if (isNativeOrORM == false) // ORM native query: like HQL
+            lock (UoW)
             {
-                if (UoW is NHibernateUnitOfWork)
-                    query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
-                else if (UoW is NHibernateBulkUnitOfWork)
-                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
-            }
-            else // Database native query
-            {
-                //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-                if (UoW is NHibernateUnitOfWork)
-                    query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-                else if (UoW is NHibernateBulkUnitOfWork)
-                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-            }
-            if (parameters != null)
-            {
-                foreach (var item in parameters)
+                IQuery query = null;
+                if (isNativeOrORM == false) // ORM native query: like HQL
                 {
-                    if (item.Value is IList || item.Value is ICollection)
+                    if (UoW is NHibernateUnitOfWork)
+                        query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
+                    else if (UoW is NHibernateBulkUnitOfWork)
+                        query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
+                }
+                else // Database native query
+                {
+                    //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                    if (UoW is NHibernateUnitOfWork)
+                        query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                    else if (UoW is NHibernateBulkUnitOfWork)
+                        query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                }
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
                     {
-                        query.SetParameterList(item.Key, (IEnumerable)item.Value);
-                    }
-                    else
-                    {
-                        query.SetParameter(item.Key, item.Value);
+                        if (item.Value is IList || item.Value is ICollection)
+                        {
+                            query.SetParameterList(item.Key, (IEnumerable)item.Value);
+                        }
+                        else
+                        {
+                            query.SetParameter(item.Key, item.Value);
+                        }
                     }
                 }
+                query.SetTimeout(timeout);
+                return (query.ExecuteUpdate());
             }
-            query.SetTimeout(timeout);
-            return (query.ExecuteUpdate());
         }
 
         private void applyAuditInfo(TEntity entity)

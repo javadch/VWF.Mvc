@@ -44,72 +44,89 @@ namespace Vaiona.PersistenceProviders.NH
 
         public TEntity Get(long id)
         {
-            // NHibernateUtil.Initialize( paths
-            if (UoW is NHibernateUnitOfWork)
-                return (((NHibernateUnitOfWork)UoW).Session.Get<TEntity>(id));
-            else if (UoW is NHibernateBulkUnitOfWork)
-                return (((NHibernateBulkUnitOfWork)UoW).Session.Get<TEntity>(id));
-            return default(TEntity);
+            lock (UoW)
+            {
+                // NHibernateUtil.Initialize( paths
+                if (UoW is NHibernateUnitOfWork)
+                    return (((NHibernateUnitOfWork)UoW).Session.Get<TEntity>(id));
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    return (((NHibernateBulkUnitOfWork)UoW).Session.Get<TEntity>(id));
+                return default(TEntity);
+            }
         }
 
         public TEntity Reload(TEntity entity)
         {
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                Evict(entity);
-                var uow = ((NHibernateUnitOfWork)UoW);
-                IClassMetadata metaInfo = uow.Session.SessionFactory.GetClassMetadata(typeof(TEntity));
-                if (metaInfo.HasIdentifierProperty)
+                if (UoW is NHibernateUnitOfWork)
                 {
-                    object idValue = entity.GetType().GetProperty(metaInfo.IdentifierPropertyName).GetValue(entity, null);
-                    return (uow.Session.Get<TEntity>(idValue));
+                    Evict(entity);
+                    var uow = ((NHibernateUnitOfWork)UoW);
+                    IClassMetadata metaInfo = uow.Session.SessionFactory.GetClassMetadata(typeof(TEntity));
+                    if (metaInfo.HasIdentifierProperty)
+                    {
+                        object idValue = entity.GetType().GetProperty(metaInfo.IdentifierPropertyName).GetValue(entity, null);
+                        return (uow.Session.Get<TEntity>(idValue));
+                    }
                 }
+                // stateless sessions have no access to the session factory!
+                return (default(TEntity));
             }
-            // stateless sessions have no access to the session factory!
-            return(default(TEntity));
         }
 
         public TEntity Refresh(Int64 id)
         {
-            Evict(id);
-            if (UoW is NHibernateUnitOfWork)
-                return (((NHibernateUnitOfWork)UoW).Session.Load<TEntity>(id));
-            return default(TEntity);
+            lock (UoW)
+            {
+                Evict(id);
+                if (UoW is NHibernateUnitOfWork)
+                    return (((NHibernateUnitOfWork)UoW).Session.Load<TEntity>(id));
+                return default(TEntity);
+            }
         }
 
         public IList<TEntity> Get(Expression<Func<TEntity, bool>> expression)
         {
-            return (this.Query(expression).ToList());
+            lock (UoW)
+            {
+                return (this.Query(expression).ToList());
+            }
         }
 
         public IList<TEntity> Get()
         {
-            return (this.Query().ToList());
+            lock (UoW)
+            {
+                return (this.Query().ToList());
+            }
         }
 
         public IList<TEntity> Get(string namedQuery, Dictionary<string, object> parameters)
         {
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
-
-            IQuery query = null;
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
-                query.SetCacheMode(cacheMode);
-            }
-            else if (UoW is NHibernateBulkUnitOfWork)
-            {
-                query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
-            }
-            if (parameters != null)
-            {
-                foreach (var item in parameters)
+                IQuery query = null;
+                if (UoW is NHibernateUnitOfWork)
                 {
-                    query.SetParameter(item.Key, item.Value);
+                    query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                    query.SetCacheMode(cacheMode);
                 }
+                else if (UoW is NHibernateBulkUnitOfWork)
+                {
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                }
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+                return (query.List<TEntity>());
             }
-            return (query.List<TEntity>());
         }
 
         /// <summary>
@@ -123,24 +140,27 @@ namespace Vaiona.PersistenceProviders.NH
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            IQuery query = null;
-            if (UoW is NHibernateUnitOfWork)
+            lock (UoW)
             {
-                query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
-                query.SetCacheMode(cacheMode);
-            }
-            else if (UoW is NHibernateBulkUnitOfWork)
-            {
-                query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
-            }
-            if (parameters != null)
-            {
-                foreach (var item in parameters)
+                IQuery query = null;
+                if (UoW is NHibernateUnitOfWork)
                 {
-                    query.SetParameter(item.Key, item.Value);
+                    query = ((NHibernateUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                    query.SetCacheMode(cacheMode);
                 }
+                else if (UoW is NHibernateBulkUnitOfWork)
+                {
+                    query = ((NHibernateBulkUnitOfWork)UoW).Session.GetNamedQuery(namedQuery);
+                }
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+                return (query.List()); // returns an un-typed list, a list of objects!
             }
-            return (query.List()); // returns an un-typed list, a list of objects!
         }
 
         public IList<TEntity> Get(string queryString, Dictionary<string, object> parameters, bool isNativeOrORM = false)
@@ -148,40 +168,43 @@ namespace Vaiona.PersistenceProviders.NH
             if (parameters != null && !Contract.ForAll(parameters, (KeyValuePair<string, object> p) => p.Value != null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            IQuery query = null;
-            if (isNativeOrORM == false) // ORM native query: like HQL
+            lock (UoW)
             {
-                if (UoW is NHibernateUnitOfWork)
+                IQuery query = null;
+                if (isNativeOrORM == false) // ORM native query: like HQL
                 {
-                    query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
-                    query.SetCacheMode(cacheMode);
+                    if (UoW is NHibernateUnitOfWork)
+                    {
+                        query = ((NHibernateUnitOfWork)UoW).Session.CreateQuery(queryString);
+                        query.SetCacheMode(cacheMode);
+                    }
+                    else if (UoW is NHibernateBulkUnitOfWork)
+                    {
+                        query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
+                    }
                 }
-                else if (UoW is NHibernateBulkUnitOfWork)
+                else // Database native query
                 {
-                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateQuery(queryString);
+                    //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                    if (UoW is NHibernateUnitOfWork)
+                    {
+                        query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                        query.SetCacheMode(cacheMode);
+                    }
+                    else if (UoW is NHibernateBulkUnitOfWork)
+                    {
+                        query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
+                    }
                 }
+                if (parameters != null)
+                {
+                    foreach (var item in parameters)
+                    {
+                        query.SetParameter(item.Key, item.Value);
+                    }
+                }
+                return (query.List<TEntity>());
             }
-            else // Database native query
-            {
-                //query = UoW.Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-                if (UoW is NHibernateUnitOfWork)
-                {
-                    query = ((NHibernateUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-                    query.SetCacheMode(cacheMode);
-                }
-                else if (UoW is NHibernateBulkUnitOfWork)
-                {
-                    query = ((NHibernateBulkUnitOfWork)UoW).Session.CreateSQLQuery(queryString).AddEntity(typeof(TEntity));
-                }
-            }
-            if (parameters != null)
-            {
-                foreach (var item in parameters)
-                {
-                    query.SetParameter(item.Key, item.Value);
-                }
-            }
-            return (query.List<TEntity>());
         }
 
         public IList<TEntity> Get(object criteria)
@@ -191,22 +214,30 @@ namespace Vaiona.PersistenceProviders.NH
 
         public IQueryable<TEntity> Query()
         {
-            //return (UoW.Session.Query<TEntity>());
-            if (UoW is NHibernateUnitOfWork)
-                return (((NHibernateUnitOfWork)UoW).Session.Query<TEntity>().CacheMode(cacheMode));
-            else if (UoW is NHibernateBulkUnitOfWork)
-                return (((NHibernateBulkUnitOfWork)UoW).Session.Query<TEntity>());
-            return null;
+            lock (UoW)
+            {
+                if (UoW is NHibernateUnitOfWork)
+                    return (((NHibernateUnitOfWork)UoW).Session.Query<TEntity>().CacheMode(cacheMode));
+                else if (UoW is NHibernateBulkUnitOfWork)
+                    return (((NHibernateBulkUnitOfWork)UoW).Session.Query<TEntity>());
+                return null;
+            }
         }
 
         public IQueryable<TEntity> Query(Expression<Func<TEntity, bool>> expression)
         {
-            return (this.Query().Where(expression).AsQueryable());
+            lock (UoW)
+            {
+                return (this.Query().Where(expression).AsQueryable());
+            }
         }
 
         public IQueryable<TEntity> Query(string expression)
         {
-            return (null); // use DynamicLinq to implement this method
+            lock (UoW)
+            {
+                return (null); // use DynamicLinq to implement this method
+            }
         }
 
         public IQueryable<TEntity> Query(object criteria)
@@ -241,9 +272,12 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void LoadIfNot(object proxy)
         {
-            if (NHibernateUtil.IsInitialized(proxy))
+            lock (UoW)
             {
-                NHibernateUtil.Initialize(proxy);
+                if (NHibernateUtil.IsInitialized(proxy))
+                {
+                    NHibernateUtil.Initialize(proxy);
+                }
             }
         }
     }

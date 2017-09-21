@@ -14,10 +14,10 @@ namespace Vaiona.PersistenceProviders.NH
 {
     public class NHibernateUnitOfWork: IUnitOfWork
     {
+        private const int LongQueryTimeOut = 300; //seconds
         //internal ISession Session = null;
         private bool autoCommit = false;
         private bool throwExceptionOnError = true;
-        private bool allowMultipleCommit = true;
         internal Conversation Conversation = null;
 
         public IPersistenceManager PersistenceManager { get; internal set; }
@@ -67,49 +67,72 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void Commit()
         {
-            try
+            lock (this)
             {
-                if (BeforeCommit != null)
-                    BeforeCommit(this, EventArgs.Empty);
-                // try detect what is going to be committed, adds, deletes, changes, and log some information about them after commit is done!                
-
-                Session.Transaction.Commit();
-                
-                if (Session.Transaction.WasCommitted)
+                try
                 {
+                    if (BeforeCommit != null)
+                        BeforeCommit(this, EventArgs.Empty);
+                    // try detect what is going to be committed, adds, deletes, changes, and log some information about them after commit is done!                
+                    this.Conversation.Commit(this);
+
                     // log the changes detected in previous steps
                     if (AfterCommit != null)
                         AfterCommit(this, EventArgs.Empty);
                 }
-            }
-            catch (Exception ex)
-            {
-                //session.Transaction.Rollback(); //??
-                if (throwExceptionOnError)
-                    throw ex;
+                catch (Exception ex)
+                {
+                    //session.Transaction.Rollback(); //??
+                    if (throwExceptionOnError)
+                        throw ex;
+                }
+                //finally // reactivate the transaction for later use by foloowing UoWs
+                //{
+                //    if (!Session.Transaction.IsActive)
+                //        Session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                //}
             }
         }
 
         public void Ignore()
         {
-            try
+            return;
+            lock (this)
             {
-                if (Session.Transaction.IsActive)
+                try
                 {
-                    if (BeforeIgnore != null)
-                        BeforeIgnore(this, EventArgs.Empty);
-                    Session.Transaction.Rollback();
-                    if (Session.Transaction.WasRolledBack)
+                    if (Session.Transaction.IsActive)
                     {
-                        if (AfterIgnore != null)
-                            AfterIgnore(this, EventArgs.Empty);
+                        if (BeforeIgnore != null)
+                            BeforeIgnore(this, EventArgs.Empty);
+                        try
+                        {
+                            if(Session.IsDirty())
+                                Session.Transaction.Rollback();
+                        }
+                        catch (Exception ex)
+                        { }
+                        if (Session.Transaction.WasRolledBack)
+                        {
+                            if (AfterIgnore != null)
+                                AfterIgnore(this, EventArgs.Empty);
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                if (throwExceptionOnError)
-                    throw ex;
+                catch (ObjectDisposedException) // object is already disposed of
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    if (throwExceptionOnError)
+                        throw ex;
+                }
+                finally // reactivate the transaction for later use by following UoWs
+                {
+                    if (!Session.Transaction.IsActive)
+                        Session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                }
             }
         }
 
@@ -117,33 +140,69 @@ namespace Vaiona.PersistenceProviders.NH
         {
             if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
-
-            T result = default(T);
-            ISession session = this.Conversation.GetSession();
-            try
+            lock (this)
             {
-                //session.BeginTransaction();
-                IQuery query = session.GetNamedQuery(queryName);
-                if (parameters != null)
+                T result = default(T);
+                ISession session = this.Conversation.GetSession();
+                try
                 {
-                    foreach (var item in parameters)
+                    //session.BeginTransaction();
+                    IQuery query = session.GetNamedQuery(queryName);
+                    query.SetTimeout(LongQueryTimeOut);
+                    if (parameters != null)
                     {
-                        query.SetParameter(item.Key, item.Value);
+                        foreach (var item in parameters)
+                        {
+                            query.SetParameter(item.Key, item.Value);
+                        }
                     }
+                    result = query.UniqueResult<T>();
+                    //session.Transaction.Commit();
                 }
-                result = query.UniqueResult<T>();
-                //session.Transaction.Commit();
+                catch
+                {
+                    //session.Transaction.Rollback();
+                    throw new Exception(string.Format("Failed for execute named query '{0}'.", queryName));
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
             }
-            catch
+        }
+
+        public List<T> ExecuteList<T>(string queryName, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && parameters.Any(p => p.Value == null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+            lock (this)
             {
-                //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute named query '{0}'.", queryName));
+                var result = new List<T>();
+                ISession session = this.Conversation.GetSession();
+                try
+                {
+                    IQuery query = session.GetNamedQuery(queryName);
+                    query.SetTimeout(LongQueryTimeOut);
+                    if (parameters != null)
+                    {
+                        foreach (var item in parameters)
+                        {
+                            query.SetParameter(item.Key, item.Value);
+                        }
+                    }
+                    result = query.List<T>().ToList();
+                }
+                catch
+                {
+                    throw new Exception(string.Format("Failed for execute named query '{0}'.", queryName));
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
             }
-            finally
-            {
-                // Do Nothing
-            }
-            return result;
         }
 
         public T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null)
@@ -151,146 +210,165 @@ namespace Vaiona.PersistenceProviders.NH
             if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
 
-            T result = default(T);
-            ISession session = this.Conversation.GetSession();
-            try
+            lock (this)
             {
-                //session.BeginTransaction();
-                IQuery query = session.CreateSQLQuery(queryString);
-                if (parameters != null)
+                T result = default(T);
+                ISession session = this.Conversation.GetSession();
+                try
                 {
-                    foreach (var item in parameters)
+                    //session.BeginTransaction();
+                    IQuery query = session.CreateSQLQuery(queryString);
+                    query.SetTimeout(LongQueryTimeOut);
+                    if (parameters != null)
                     {
-                        query.SetParameter(item.Key, item.Value);
+                        foreach (var item in parameters)
+                        {
+                            query.SetParameter(item.Key, item.Value);
+                        }
                     }
+                    result = query.UniqueResult<T>();
+                    //session.Transaction.Commit();
                 }
-                result = query.UniqueResult<T>();
-                //session.Transaction.Commit();
+                catch
+                {
+                    //session.Transaction.Rollback();
+                    throw new Exception(string.Format("Failed for execute the submitted native query."));
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
             }
-            catch
-            {
-                //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
-            }
-            finally
-            {
-                // Do Nothing
-            }
-            return result;
         }
 
         public int ExecuteNonQuery(string queryString, Dictionary<string, object> parameters = null)
         {            
             if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
-            int result = 0;
-            try
+
+            lock (this)
             {
-                using (ITransaction transaction = this.Session.BeginTransaction())
+                int result = 0;
+                try
                 {
-                    IDbCommand command = this.Session.Connection.CreateCommand();
-                    command.Connection = this.Session.Connection;
-
-                    transaction.Enlist(command);
-
-                    command.CommandText = queryString;
-                    if (parameters != null)
+                    using (ITransaction transaction = this.Session.BeginTransaction())
                     {
-                        foreach (var item in parameters)
-                        {
-                            command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic one
-                        }
-                    }
-                    command.ExecuteNonQuery();
+                        IDbCommand command = this.Session.Connection.CreateCommand();
+                        command.CommandTimeout = LongQueryTimeOut;
+                        command.Connection = this.Session.Connection;
 
-                    transaction.Commit();
+                        transaction.Enlist(command);
+
+                        command.CommandText = queryString;
+                        if (parameters != null)
+                        {
+                            foreach (var item in parameters)
+                            {
+                                command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic one
+                            }
+                        }
+                        command.ExecuteNonQuery();
+
+                        transaction.Commit();
+                    }
                 }
+                catch (Exception ex)
+                {
+                    //session.Transaction.Rollback();
+                    throw new Exception(string.Format("Failed for execute the submitted native query."), ex);
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
             }
-            catch
-            {
-                //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
-            }
-            finally
-            {
-                // Do Nothing
-            }
-            return result;
         }
 
         public object ExecuteScalar(string queryString, Dictionary<string, object> parameters = null)
         {
             if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
-            object result = null;
-            try
+
+            lock (this)
             {
-                using (ITransaction transaction = this.Session.BeginTransaction())
+                object result = null;
+                try
                 {
-                    IDbCommand command = this.Session.Connection.CreateCommand();
-                    command.Connection = this.Session.Connection;
-
-                    transaction.Enlist(command);
-
-                    command.CommandText = queryString;
-                    if (parameters != null)
+                    using (ITransaction transaction = this.Session.BeginTransaction())
                     {
-                        foreach (var item in parameters)
-                        {
-                            command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic one
-                        }
-                    }
-                    result = command.ExecuteScalar();
+                        IDbCommand command = this.Session.Connection.CreateCommand();
+                        command.CommandTimeout = LongQueryTimeOut;
+                        command.Connection = this.Session.Connection;
 
-                    transaction.Commit();
+                        transaction.Enlist(command);
+
+                        command.CommandText = queryString;
+                        if (parameters != null)
+                        {
+                            foreach (var item in parameters)
+                            {
+                                command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic one
+                            }
+                        }
+                        result = command.ExecuteScalar();
+
+                        transaction.Commit();
+                    }
                 }
+                catch
+                {
+                    //session.Transaction.Rollback();
+                    throw new Exception(string.Format("Failed for execute the submitted native query."));
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
             }
-            catch
-            {
-                //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
-            }
-            finally
-            {
-                // Do Nothing
-            }
-            return result;
         }
 
         public DataTable ExecuteQuery(string queryString, Dictionary<string, object> parameters = null)
         {
             if (parameters != null && parameters.Any(p => p.Value == null))
                 throw new ArgumentException("The parameter array has a null element", "parameters");
-            DataTable table = new DataTable();
-            try
+
+            lock (this)
             {
-                using (IDbCommand command = this.Session.Connection.CreateCommand())
+                DataTable table = new DataTable();
+                try
                 {
-                    command.Connection = this.Session.Connection;
-                    command.CommandText = queryString;
-
-                    if (parameters != null)
+                    using (IDbCommand command = this.Session.Connection.CreateCommand())
                     {
-                        foreach (var item in parameters)
-                        {
-                            command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic, IDbParameter
-                        }
-                    }
+                        command.Connection = this.Session.Connection;
+                        command.CommandTimeout = LongQueryTimeOut;
+                        command.CommandText = queryString;
 
-                    IDataReader dr = command.ExecuteReader(CommandBehavior.SingleResult);
-                    table.Load(dr);
+                        if (parameters != null)
+                        {
+                            foreach (var item in parameters)
+                            {
+                                command.Parameters.Add(new SqlParameter(item.Key, item.Value)); // sql paramater must be changed to a more generic, IDbParameter
+                            }
+                        }
+
+                        IDataReader dr = command.ExecuteReader(CommandBehavior.SingleResult);
+                        table.Load(dr);
+                    }
                 }
+                catch (Exception ex)
+                {
+                    //session.Transaction.Rollback();
+                    throw new Exception(string.Format("Failed for execute the submitted native query."), ex);
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return table;
             }
-            catch (Exception ex)
-            {
-                //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."), ex);
-            }
-            finally
-            {
-                // Do Nothing
-            }
-            return table;
         }
 
         private bool isDisposed = false;

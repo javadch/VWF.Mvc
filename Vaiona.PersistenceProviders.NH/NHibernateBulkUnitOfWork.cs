@@ -56,26 +56,33 @@ namespace Vaiona.PersistenceProviders.NH
 
         public void Commit()
         {
-            try
+            lock (this)
             {
-                if (BeforeCommit != null)
-                    BeforeCommit(this, EventArgs.Empty);
-                // try detect what is going to be committed, adds, deletes, changes, and log some information about them after commit is done!                
-
-                Session.Transaction.Commit();
-                
-                if (Session.Transaction.WasCommitted)
+                try
                 {
-                    // log the changes detected in previous steps
-                    if (AfterCommit != null)
-                        AfterCommit(this, EventArgs.Empty);
+                    if (BeforeCommit != null)
+                        BeforeCommit(this, EventArgs.Empty);
+                    // try detect what is going to be committed, adds, deletes, changes, and log some information about them after commit is done!                
+                    this.Conversation.Commit(this);
+
+                    if (Session.Transaction.WasCommitted)
+                    {
+                        // log the changes detected in previous steps
+                        if (AfterCommit != null)
+                            AfterCommit(this, EventArgs.Empty);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                //session.Transaction.Rollback(); //??
-                if (throwExceptionOnError)
-                    throw ex;
+                catch (Exception ex)
+                {
+                    //session.Transaction.Rollback(); //??
+                    if (throwExceptionOnError)
+                        throw ex;
+                }
+                //finally // reactivate the transaction for later use by foloowing UoWs
+                //{
+                //    if (!Session.Transaction.IsActive)
+                //        Session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                //}
             }
         }
 
@@ -139,6 +146,37 @@ namespace Vaiona.PersistenceProviders.NH
                 // Do Nothing
             }
             return result;
+        }
+        public List<T> ExecuteList<T>(string queryName, Dictionary<string, object> parameters = null)
+        {
+            if (parameters != null && parameters.Any(p => p.Value == null))
+                throw new ArgumentException("The parameter array has a null element", "parameters");
+            lock (this)
+            {
+                var result = new List<T>();
+                IStatelessSession session = this.Session;
+                try
+                {
+                    IQuery query = session.GetNamedQuery(queryName);
+                    if (parameters != null)
+                    {
+                        foreach (var item in parameters)
+                        {
+                            query.SetParameter(item.Key, item.Value);
+                        }
+                    }
+                    result = query.List<T>().ToList();
+                }
+                catch
+                {
+                    throw new Exception(string.Format("Failed for execute named query '{0}'.", queryName));
+                }
+                finally
+                {
+                    // Do Nothing
+                }
+                return result;
+            }
         }
 
         public T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null)
@@ -319,9 +357,15 @@ namespace Vaiona.PersistenceProviders.NH
                 else
                     this.Ignore();
                 this.Conversation.End(this);
-            }catch
+            }
+            catch (ObjectDisposedException) // object is already disposed
             {
-                // do nothing
+                return;
+            }
+            catch (Exception ex)
+            {
+                if (throwExceptionOnError)
+                    throw ex;
             }
             // unhook the event handlers appropriately
             BeforeCommit = null;

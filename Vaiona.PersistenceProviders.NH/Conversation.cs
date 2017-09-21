@@ -30,27 +30,6 @@ namespace Vaiona.PersistenceProviders.NH
             this.type = type;
             this.commitTransaction = commitTransaction;
             this.showQueries = showQueries;
-
-            switch (type)
-            {
-                case TypeOfUnitOfWork.Normal: // obtain a stateful session from the current session provide
-                    this.session = getAmbientSession(true);
-                    statefull = true;
-                    stSession = null;
-                    break;
-                case TypeOfUnitOfWork.Isolated: // create a stateful session
-                    this.session = createSession(sessionFactory);
-                    statefull = true;
-                    stSession = null;
-                    break;
-                case TypeOfUnitOfWork.Bulk: // create a stateless session
-                    this.stSession = createStatelessSession(sessionFactory);
-                    statefull = false;
-                    session = null;
-                    break;
-                default:
-                    break;
-            }
         }
 
         public bool IsStatefull()
@@ -78,27 +57,33 @@ namespace Vaiona.PersistenceProviders.NH
             switch (type)
             {
                 case TypeOfUnitOfWork.Normal: // add the uow to the observers of the current conversation, so that at closing time, the conversation is disposed with the last uow
+                    this.session = getAmbientSession(true);
+                    statefull = true;
+                    stSession = null;
+
                     registerUnit(session, uow);
                     if (!AppConfiguration.CacheQueryResults)
                         session.CacheMode = NHibernate.CacheMode.Ignore;
                     else
                         session.CacheMode = NHibernate.CacheMode.Normal;
-                    if (!session.Transaction.IsActive)
-                        session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
                     sessionCode = session.GetHashCode();
                     break;
                 case TypeOfUnitOfWork.Isolated: // single conversation per uow
+                    this.session = createSession();
+                    statefull = true;
+                    stSession = null;
+
                     if (!AppConfiguration.CacheQueryResults)
                         session.CacheMode = NHibernate.CacheMode.Ignore;
                     else
                         session.CacheMode = NHibernate.CacheMode.Normal;
-                    if (!session.Transaction.IsActive)
-                        session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
                     sessionCode = session.GetHashCode();
                     break;
                 case TypeOfUnitOfWork.Bulk: // single conversation per uow
-                    if (!stSession.Transaction.IsActive)
-                        stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                    this.stSession = createStatelessSession();
+                    statefull = false;
+                    session = null;
+
                     sessionCode = stSession.GetHashCode();
                     break;
                 default:
@@ -107,6 +92,55 @@ namespace Vaiona.PersistenceProviders.NH
 
             if (showQueries)
                 Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was opened. ID: " + sessionCode);
+        }
+
+        public void Commit(IUnitOfWork uow)
+        {
+            try
+            {
+                switch (type)
+                {
+
+                    case TypeOfUnitOfWork.Normal: // add the uow to the observers of the current conversation, so that at closing time, the conversation is disposed with the last uow
+                        lock (uow) // one commit per uow at a time!
+                        {
+                            if (!session.IsConnected)
+                                session.Reconnect();
+                            if (!session.Transaction.IsActive)
+                                session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                            session.Transaction.Commit();
+                        }
+                        break;
+                    case TypeOfUnitOfWork.Isolated: // single conversation per uow
+                        lock (uow) // one commit per uow at a time!
+                        {
+                            if (!session.IsConnected)
+                                session.Reconnect();
+                            if (!session.Transaction.IsActive)
+                                session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                            session.Transaction.Commit();
+                        }
+                        break;
+                    case TypeOfUnitOfWork.Bulk: // single conversation per uow
+                        lock (uow) // one commit per uow at a time!
+                        {
+                            if (!stSession.IsConnected)
+                                stSession = createStatelessSession();
+                            if (!stSession.Transaction.IsActive)
+                                stSession.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
+                            stSession.Transaction.Commit();
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+            //catch (Exception ex) // check what has happend, and try to commit again.
+            //{ }
+            finally
+            { // no need to reactivate the transactio, it will be done on next commit attempt.
+            }
+
         }
 
         public void End(IUnitOfWork uow)
@@ -152,6 +186,8 @@ namespace Vaiona.PersistenceProviders.NH
 
         private ISession getAmbientSession(bool openIfNeeded)
         {
+            if (AppConfiguration.ConversationIsolationLevel == 1)
+                return createSession();
             ISession session = null;
             try
             {
@@ -163,8 +199,9 @@ namespace Vaiona.PersistenceProviders.NH
                 return session;
             if (session == null)
             {   //start a new session
-                var sessionInitilizer = new Lazy<ISession>(() => createSession(sessionFactory));
-                NHibernateCurrentSessionProvider.Bind(sessionInitilizer, sessionFactory);
+                //var sessionInitilizer = new Lazy<ISession>(() => createSession(sessionFactory));
+                session = createSession();
+                NHibernateCurrentSessionProvider.Bind(session, sessionFactory);
                 // try get the session after starting a new conversation
                 session = sessionFactory.GetCurrentSession();
             }
@@ -173,14 +210,14 @@ namespace Vaiona.PersistenceProviders.NH
             return (session);
         }
 
-        private ISession createSession(ISessionFactory sessionFactory)
+        private ISession createSession()
         {
             var session = sessionFactory.OpenSession(cfg.Interceptor);
             //session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             return session;
         }
 
-        private IStatelessSession createStatelessSession(ISessionFactory sessionFactory)
+        private IStatelessSession createStatelessSession()
         {
             IStatelessSession session = sessionFactory.OpenStatelessSession(); // No interceptor can be passed!
             return session;
@@ -201,7 +238,7 @@ namespace Vaiona.PersistenceProviders.NH
                         }
                         catch (Exception ex)
                         {
-                            session.Transaction.Rollback();
+                            //session.Transaction.Rollback();
                             throw new Exception("There were some changes submitted to the system that could not be committed!", ex);
                         }
                     }
@@ -211,6 +248,7 @@ namespace Vaiona.PersistenceProviders.NH
                     }
                 }
             }
+            catch { } // do nothing
             finally
             {
                 if (session.IsOpen)
@@ -238,7 +276,7 @@ namespace Vaiona.PersistenceProviders.NH
                         }
                         catch (Exception ex)
                         {
-                            stSession.Transaction.Rollback();
+                            //stSession.Transaction.Rollback();
                             throw new Exception("There were some changes submitted to the system that could not be committed!", ex);
                         }
                     }
