@@ -643,6 +643,32 @@ namespace Vaiona.Utils.Cfg
             }
         }
 
+
+        private static int? conversationIsolationLevel = null;
+        /// <summary>
+        /// Determines whether conversations (database sessions) are shared between units of work.
+        /// 1: one session per unit of work, 2: shared session between units per HTTP request
+        /// </summary>
+        /// <remarks>Isolated Units of Work remain isolated.</remarks>
+        public static int ConversationIsolationLevel
+        {
+            get
+            {
+                if (conversationIsolationLevel.HasValue)
+                    return conversationIsolationLevel.Value;
+                try
+                {
+                    string s = ConfigurationManager.AppSettings["ConversationIsolationLevel"];
+                    if (string.IsNullOrEmpty(s))
+                        conversationIsolationLevel = 1;
+                    else
+                        conversationIsolationLevel = int.Parse(s);
+                }
+                catch { conversationIsolationLevel = 1; }
+                return conversationIsolationLevel.Value;
+            }
+        }
+
         //public static bool IsCustomLoggingEnable
         //{
         //}

@@ -35,10 +35,11 @@ namespace Vaiona.IoC.Unity
         public void StartSessionLevelContainer()
         {
             string key = HttpContext.Current.Session.SessionID;
-            if (this.children.ContainsKey(key))
-                return;
-            UnityIoC child = new UnityIoC(container.CreateChildContainer());
-            children.Add(key, child);
+            if (!children.ContainsKey(key))
+            {
+                UnityIoC child = new UnityIoC(container.CreateChildContainer());
+                children.Add(key, child);
+            }
         }
 
         public void RegisterHeirarchical(Type from, Type to)
@@ -78,9 +79,13 @@ namespace Vaiona.IoC.Unity
 
         public void ShutdownSessionLevelContainer()
         {
-            string key = HttpContext.Current.Session.SessionID;
-            if (this.children.ContainsKey(key))
-                children.Remove(key);
+            try
+            {
+                string key = HttpContext.Current.Session.SessionID;
+                if (this.children.ContainsKey(key))
+                    children.Remove(key);
+            }
+            catch { }
         }
 
         public void Teardown(object obj)
@@ -90,20 +95,21 @@ namespace Vaiona.IoC.Unity
 
         public T ResolveForSession<T>()
         {
-            string key = HttpContext.Current.Session.SessionID;
-            if (this.children.ContainsKey(key))
+            try
             {
-                UnityIoC child = this.children[key];
-                try
+                string key = HttpContext.Current.Session.SessionID;
+                if (this.children.ContainsKey(key))
                 {
+                    UnityIoC child = this.children[key];
                     T o = child.container.Resolve<T>();
                     return (o);
                 }
-                catch (Exception ex)
-                {
-                    return default(T);
-                }
             }
+            catch (Exception ex)
+            {
+                return default(T);
+            }
+
             return default(T);
         }
 
