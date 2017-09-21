@@ -31,7 +31,7 @@ namespace Vaiona.PersistenceProviders.NH
                 isim = (this.UnitOfWork as NHibernateUnitOfWork).Session.GetSessionImplementation();
             else if (UoW is NHibernateBulkUnitOfWork)
                 isim = (this.UnitOfWork as NHibernateBulkUnitOfWork).Session.GetSessionImplementation();
-            bool result = NHibernate.Engine.ForeignKeys.IsTransient("", proxy, true, isim);
+            bool result = NHibernate.Engine.ForeignKeys.IsTransient(proxy.GetType().FullName, proxy, true, isim);
             return (result);
         }
 
