@@ -25,7 +25,12 @@ namespace Vaiona.Logging.Loggers
         {
             string serialNo = string.Format("{0}.{1}.{2}", DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year);
             string fileName = "bexis." + serialNo + ".log";
-            string logFile = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Logging", fileName);
+            string logFolder = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Logging");
+            if(!Directory.Exists(logFolder))
+            {
+                Directory.CreateDirectory(logFolder);
+            }
+            string logFile = Path.Combine(logFolder, fileName);
             return logFile;
         }
         public void LogCustom(CustomLogEntry logEntry)
@@ -36,17 +41,23 @@ namespace Vaiona.Logging.Loggers
         // This mechanism must be replaced with a robust solution. It is only experimental.
         public void LogCustom(string message)
         {
+            FileStream stream = null;
+            StreamWriter streamWriter = null;
             try
             {
                 string logFile = buildLogFileName();
-                FileStream stream = new FileStream(logFile, FileMode.Append, FileAccess.Write);
-                StreamWriter streamWriter = new StreamWriter((Stream)stream);
+                stream = new FileStream(logFile, FileMode.Append, FileAccess.Write);
+                streamWriter = new StreamWriter((Stream)stream);
                 string wrappedMessage = string.Format("{0}: {1}", DateTime.UtcNow, message);
                 streamWriter.WriteLine(wrappedMessage);
-                streamWriter.Close();
-                stream.Close();
+                
             }
             catch { }
+            finally
+            {
+                stream.Close();
+                streamWriter.Close();
+            }
         }
 
         public void LogData(DataLogEntry logEntry)
