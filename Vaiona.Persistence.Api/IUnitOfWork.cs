@@ -66,6 +66,7 @@ namespace Vaiona.Persistence.Api
         /// <param name="parameters">A dictionary of parameter name/values to be passed to the query.</param>
         /// <returns></returns>
         T Execute<T>(string queryName, Dictionary<string, object> parameters = null);
+        List<T> ExecuteList<T>(string queryName, Dictionary<string, object> parameters = null);
         T ExecuteDynamic<T>(string queryString, Dictionary<string, object> parameters = null);
         int ExecuteNonQuery(string queryString, Dictionary<string, object> parameters = null);
         object ExecuteScalar(string queryString, Dictionary<string, object> parameters = null);
