@@ -55,8 +55,12 @@ namespace Vaiona.Logging.Loggers
             catch { }
             finally
             {
-                stream.Close();
-                streamWriter.Close();
+                try
+                {
+                    stream.Close();
+                    streamWriter.Close();
+                }
+                catch { }
             }
         }
 
