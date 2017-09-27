@@ -41,27 +41,21 @@ namespace Vaiona.Logging.Loggers
         // This mechanism must be replaced with a robust solution. It is only experimental.
         public void LogCustom(string message)
         {
-            FileStream stream = null;
-            StreamWriter streamWriter = null;
+            // get file name
+            string logFile = buildLogFileName();
+
+            // prepare message
+            string wrappedMessage = string.Format("{0}: {1}", DateTime.UtcNow, message);
+
+            // append to file
             try
             {
-                string logFile = buildLogFileName();
-                stream = new FileStream(logFile, FileMode.Append, FileAccess.Write);
-                streamWriter = new StreamWriter((Stream)stream);
-                string wrappedMessage = string.Format("{0}: {1}", DateTime.UtcNow, message);
-                streamWriter.WriteLine(wrappedMessage);
-                
+                using (StreamWriter file = new StreamWriter(logFile, true))
+                {
+                    file.WriteLine(wrappedMessage);
+                }
             }
             catch { }
-            finally
-            {
-                try
-                {
-                    stream.Close();
-                    streamWriter.Close();
-                }
-                catch { }
-            }
         }
 
         public void LogData(DataLogEntry logEntry)
