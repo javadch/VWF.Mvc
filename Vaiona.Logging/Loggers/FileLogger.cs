@@ -23,7 +23,7 @@ namespace Vaiona.Logging.Loggers
 
         private string buildLogFileName()
         {
-            string serialNo = string.Format("{0}.{1}.{2}", DateTime.UtcNow.Day, DateTime.UtcNow.Month, DateTime.UtcNow.Year);
+            string serialNo = string.Format("{0}.{1}.{2}", DateTime.UtcNow.Year.ToString("D4"), DateTime.UtcNow.Month.ToString("D2"), DateTime.UtcNow.Day.ToString("D2") );
             string fileName = "bexis." + serialNo + ".log";
             string logFolder = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Logging");
             if(!Directory.Exists(logFolder))
