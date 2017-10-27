@@ -660,11 +660,11 @@ namespace Vaiona.Utils.Cfg
                 {
                     string s = ConfigurationManager.AppSettings["ConversationIsolationLevel"];
                     if (string.IsNullOrEmpty(s))
-                        conversationIsolationLevel = 1;
+                        conversationIsolationLevel = 2;
                     else
                         conversationIsolationLevel = int.Parse(s);
                 }
-                catch { conversationIsolationLevel = 1; }
+                catch { conversationIsolationLevel = 2; }
                 return conversationIsolationLevel.Value;
             }
         }

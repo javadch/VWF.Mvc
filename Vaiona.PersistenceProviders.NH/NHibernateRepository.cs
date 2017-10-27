@@ -61,9 +61,19 @@ namespace Vaiona.PersistenceProviders.NH
                 if (UoW is NHibernateUnitOfWork)
                 {
                     ISession session = ((NHibernateUnitOfWork)UoW).Session;
-                    if(!IsTransient(entity))
-                        session.Lock(entity, LockMode.Read);
-                    session.SaveOrUpdate(entity);
+                    // best effort to lock the row for writing, but it my fail on objects that carry a bag/set/collection of child entities.
+                    // This locking mechanism needs to be revised.
+                    try
+                    {
+                        if (!IsTransient(entity))
+                            session.Lock(entity, LockMode.UpgradeNoWait);
+                    }
+                    catch (Exception ex) // do nothing for now!
+                    { }
+                    finally
+                    {
+                        session.SaveOrUpdate(entity);
+                    }
                     return true;
                 }
                 else if (UoW is NHibernateBulkUnitOfWork)

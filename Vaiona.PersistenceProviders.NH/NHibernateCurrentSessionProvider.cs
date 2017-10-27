@@ -30,8 +30,7 @@ namespace Vaiona.PersistenceProviders.NH
             ISession session;
             var currentSessionFactoryMap = GetCurrentFactoryMap();
             
-            if (currentSessionFactoryMap == null ||
-                !currentSessionFactoryMap.TryGetValue(_factory, out session)) {
+            if (currentSessionFactoryMap == null || !currentSessionFactoryMap.TryGetValue(_factory, out session)) {
                 return null;
             }
             return (session);

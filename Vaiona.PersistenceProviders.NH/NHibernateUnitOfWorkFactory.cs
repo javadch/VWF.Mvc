@@ -37,7 +37,7 @@ namespace Vaiona.PersistenceProviders.NH
         public IUnitOfWork CreateIsolatedUnitOfWork(bool autoCommit = false, bool throwExceptionOnError = true,
             EventHandler beforeCommit = null, EventHandler afterCommit = null, EventHandler beforeIgnore = null, EventHandler afterIgnore = null)
         {
-            Conversation cnv = new Conversation(sessionFactory, config, TypeOfUnitOfWork.Normal, autoCommit, AppConfiguration.ShowQueries);
+            Conversation cnv = new Conversation(sessionFactory, config, TypeOfUnitOfWork.Isolated, autoCommit, AppConfiguration.ShowQueries);
             NHibernateUnitOfWork u = new NHibernateUnitOfWork(manager, cnv, autoCommit, throwExceptionOnError);
             u.BeforeCommit += beforeCommit;
             u.AfterCommit += afterCommit;
