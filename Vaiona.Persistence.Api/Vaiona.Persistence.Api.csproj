@@ -49,6 +49,7 @@
     <Compile Include="IPersistenceManager.cs" />
     <Compile Include="IReadOnlyRepository.cs" />
     <Compile Include="IRepository.cs" />
+    <Compile Include="ISessionProvider.cs" />
     <Compile Include="IUnitOfWork.cs" />
     <Compile Include="IUnitOfWorkFactory.cs" />
     <Compile Include="PersistenceFactory.cs" />

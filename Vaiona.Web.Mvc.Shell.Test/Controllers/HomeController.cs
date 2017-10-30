@@ -9,6 +9,7 @@ using Vaiona.Logging;
 using Vaiona.Logging.Aspects;
 using Vaiona.MultiTenancy.Api;
 using Vaiona.Web.Extensions;
+using Vaiona.Persistence.Api;
 
 namespace Vaiona.Web.Mvc.Shell.Test.Controllers
 {
@@ -21,15 +22,28 @@ namespace Vaiona.Web.Mvc.Shell.Test.Controllers
             //ITenantRegistrar tenantRegistrar = MultiTenantFactory.GetTenantRegistrar();
             //tenantRegistrar.Inactivate(Session.GetTenant().Id);
             //tenantRegistrar.Activate(Session.GetTenant().Id);
-            
+
             //tenantRegistrar.MakeDefault("idiv");
             //tenantRegistrar.Unregister("idiv");
 
             //tenantRegistrar.MakeDefault("bexis");
             //tenantRegistrar.Unregister("idiv");
             //tenantRegistrar.Unregister("bexis");
-
+            testUoW();
             return View();
+        }
+
+        private void testUoW()
+        {
+            using (var uow = this.GetUnitOfWork())
+            {
+                var repo = uow.GetReadOnlyRepository<LogEntry>();
+            }
+
+            using (var uow = this.GetUnitOfWork())
+            {
+                var repo = uow.GetReadOnlyRepository<LogEntry>();
+            }
         }
 
         [DoesNotNeedDataAccess]

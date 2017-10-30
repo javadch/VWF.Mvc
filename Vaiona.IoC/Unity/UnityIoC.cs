@@ -32,16 +32,6 @@ namespace Vaiona.IoC.Unity
             container.LoadConfiguration(section, containerName);
         }
 
-        public void StartSessionLevelContainer()
-        {
-            string key = HttpContext.Current.Session.SessionID;
-            if (!children.ContainsKey(key))
-            {
-                UnityIoC child = new UnityIoC(container.CreateChildContainer());
-                children.Add(key, child);
-            }
-        }
-
         public void RegisterHeirarchical(Type from, Type to)
         {
             this.container.RegisterType(from, to, new HierarchicalLifetimeManager());
@@ -77,6 +67,72 @@ namespace Vaiona.IoC.Unity
             return container.IsRegistered<T>(name);
         }
 
+        public void RegisterPerRequest(Type from, Type to)
+        {
+            this.container.RegisterType(from, to, new UnityPerRequestLifetimeManager(from));
+        }
+
+        private static readonly string IoCContainerPerRequestKey = "IoCRerRequestKey_Container";
+        public void StartRequestLevelContainer()
+        {
+            string key = IoCContainerPerRequestKey;
+            UnityIoC child = new UnityIoC(container.CreateChildContainer());
+            UnityPerRequestHttpModule.AddToContext(key, child);
+        }
+
+        public void ShutdownRequestLevelContainer()
+        {
+            try
+            {
+                string key = IoCContainerPerRequestKey;
+                UnityPerRequestHttpModule.RemoveFromContext(key);
+            }
+            catch { }
+        }
+
+        public T ResolveForRequest<T>()
+        {
+            try
+            {
+                string key = IoCContainerPerRequestKey;
+                UnityIoC child = (UnityIoC)UnityPerRequestHttpModule.GetValueFromContext(key);
+                if (child != null)
+                {
+                    T o = child.container.Resolve<T>();
+                    return (o);
+                }
+            }
+            catch (Exception ex)
+            {
+                return default(T);
+            }
+
+            return default(T);
+        }
+
+        public object ResolveForRequest(Type t)
+        {
+            string key = IoCContainerPerRequestKey;
+            UnityIoC child = (UnityIoC)UnityPerRequestHttpModule.GetValueFromContext(key);
+            if (child != null)
+            {
+                object o = child.Resolve(t);
+                return (o);
+            }
+            return null;
+        }
+
+
+        public void StartSessionLevelContainer()
+        {
+            string key = HttpContext.Current.Session.SessionID;
+            if (!children.ContainsKey(key))
+            {
+                UnityIoC child = new UnityIoC(container.CreateChildContainer());
+                children.Add(key, child);
+            }
+        }
+
         public void ShutdownSessionLevelContainer()
         {
             try
@@ -86,11 +142,6 @@ namespace Vaiona.IoC.Unity
                     children.Remove(key);
             }
             catch { }
-        }
-
-        public void Teardown(object obj)
-        {
-            container.Teardown(obj);
         }
 
         public T ResolveForSession<T>()
@@ -124,5 +175,11 @@ namespace Vaiona.IoC.Unity
             }
             return null;
         }
+
+        public void Teardown(object obj)
+        {
+            container.Teardown(obj);
+        }
+
     }
 }

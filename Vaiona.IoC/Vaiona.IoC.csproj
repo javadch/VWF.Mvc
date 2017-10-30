@@ -60,6 +60,8 @@
     <Compile Include="IoCFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Unity\UnityIoC.cs" />
+    <Compile Include="Unity\UnityPerRequestHttpModule.cs" />
+    <Compile Include="Unity\UnityPerRequestLifetimeManager.cs" />
     <Compile Include="Unity\UnityPerSessionLifetimeManager.cs" />
   </ItemGroup>
   <ItemGroup>

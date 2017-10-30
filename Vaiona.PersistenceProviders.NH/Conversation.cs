@@ -155,7 +155,7 @@ namespace Vaiona.PersistenceProviders.NH
                     unRegisterUnit(session, uow); // remove the UoW from the list of conversation observers
                     if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
                     {
-                        NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
+                        //NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
                         endSession();
                     }
                     break;
@@ -192,22 +192,13 @@ namespace Vaiona.PersistenceProviders.NH
             try
             {
                 session = sessionFactory.GetCurrentSession();
+                //this flush mode will flush on manual flushes and when transactions are committed.
+                session.FlushMode = FlushMode.Commit;
+                return (session);
             }
             catch
             { }
-            if (!openIfNeeded) // Maybe no session is available, this returns null if no ambient session is available.
-                return session;
-            if (session == null)
-            {   //start a new session
-                //var sessionInitilizer = new Lazy<ISession>(() => createSession(sessionFactory));
-                session = createSession();
-                NHibernateCurrentSessionProvider.Bind(session, sessionFactory);
-                // try get the session after starting a new conversation
-                session = sessionFactory.GetCurrentSession();
-            }
-            //this flush mode will flush on manual flushes and when transactions are committed.
-            session.FlushMode = FlushMode.Commit;
-            return (session);
+            return null;
         }
 
         private ISession createSession()
@@ -251,13 +242,13 @@ namespace Vaiona.PersistenceProviders.NH
             catch { } // do nothing
             finally
             {
-                if (session.IsOpen)
-                    session.Close();
-                if (showQueries) // do this befoire disposing the session and setting it to null
-                    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
-                session.Dispose();
-                session = null;
-                GC.Collect();
+                //if (session.IsOpen)
+                //    session.Close();
+                //if (showQueries) // do this befoire disposing the session and setting it to null
+                //    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
+                //session.Dispose();
+                //session = null;
+                //GC.Collect();
             }
         }
 
@@ -300,23 +291,23 @@ namespace Vaiona.PersistenceProviders.NH
 
         private void registerUnit(object session, IUnitOfWork uow)
         {
-            if(!attachedUnits.ContainsKey(session))
-            {
-                attachedUnits.Add(session, new List<IUnitOfWork> { uow });
-            }
-            else if(!attachedUnits[session].Contains(uow))
-            {
-                attachedUnits[session].Add(uow);
-            }
+            //if(!attachedUnits.ContainsKey(session))
+            //{
+            //    attachedUnits.Add(session, new List<IUnitOfWork> { uow });
+            //}
+            //else if(!attachedUnits[session].Contains(uow))
+            //{
+            //    attachedUnits[session].Add(uow);
+            //}
         }
 
         private void unRegisterUnit(object session, IUnitOfWork uow)
         {
-            if (!attachedUnits.ContainsKey(session))
-                return;
-            attachedUnits[session].Remove(uow);
-            if (attachedUnits[session].Count() <= 0)
-                attachedUnits.Remove(session);            
+            //if (!attachedUnits.ContainsKey(session))
+            //    return;
+            //attachedUnits[session].Remove(uow);
+            //if (attachedUnits[session].Count() <= 0)
+            //    attachedUnits.Remove(session);            
         }
     }
 }

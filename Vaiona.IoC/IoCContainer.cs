@@ -13,6 +13,13 @@ namespace Vaiona.IoC
         void RegisterHeirarchical(Type from, Type to);
         void Register(Type from, Type to);
 
+        void RegisterPerRequest(Type from, Type to);
+        void StartRequestLevelContainer();
+        void ShutdownRequestLevelContainer();
+        T ResolveForRequest<T>();
+        object ResolveForRequest(Type t);
+
+
         bool IsRegistered(Type t, string name);
         //IEnumerable<object> ResolveAll(Type t);
 

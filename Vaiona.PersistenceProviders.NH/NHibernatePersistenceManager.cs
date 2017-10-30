@@ -14,6 +14,7 @@ using Vaiona.Utils.Cfg;
 using System.Diagnostics;
 using System.Reflection;
 using Vaiona.Web.Mvc.Modularity;
+using Vaiona.IoC;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -23,15 +24,22 @@ namespace Vaiona.PersistenceProviders.NH
         private static Configuration cfg;
         //private static string configFile = "";
         private IUnitOfWorkFactory uowFactory;
-        public object Factory { get { return sessionFactory; } }
         Dictionary<string, List<FileInfo>> componentPostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         Dictionary<string, List<FileInfo>> modulePostInstallationFiles = new Dictionary<string, List<FileInfo>>();
         bool showQueries;
+
+        public object Factory { get { return sessionFactory; } }
+        public object Configuration { get { return cfg; } }
+        public bool ShowQueries { get { return showQueries; } }
 
         public IUnitOfWorkFactory UnitOfWorkFactory { get { return uowFactory; } }
         public NHibernatePersistenceManager()
         {
             //uowFactory = new NHibernateUnitOfWorkFactory(this, cfg); // it is populated at start time
+            if (!IoCFactory.Container.IsRegistered(typeof(ISession), ""))
+            {
+                IoCFactory.Container.RegisterPerRequest(typeof(ISessionProvider), typeof(NHibernateSessionProvider));
+            }
         }
 
         public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries = false)
