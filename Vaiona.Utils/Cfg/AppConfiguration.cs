@@ -25,7 +25,7 @@ namespace Vaiona.Utils.Cfg
         {
             get
             {
-                return HttpContext.Current != null;
+                return (HttpContext != null && HttpContext.Current != null);
             }
         }
 

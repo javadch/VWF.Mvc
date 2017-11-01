@@ -173,7 +173,7 @@ namespace Vaiona.Core.Serialization
             element.SetAttribute("Name", name);
             if (obj == null)
             {
-                element.SetAttribute("value", "null");
+                element.SetAttribute("value", "");
                 return element;
             }
 

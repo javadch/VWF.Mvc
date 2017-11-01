@@ -88,7 +88,7 @@ namespace Vaiona.Core.Serialization
 
             // check for null
             string value = element.GetAttribute("value");
-            if (value == "null")
+            if (value == null) // maybe a check for empty value should also be here
             {
                 return null;
             }
@@ -126,6 +126,7 @@ namespace Vaiona.Core.Serialization
             // process some simple types
             switch (Type.GetTypeCode(objType))
             {
+                // there should be a set of checks/ decisions for empty and null values
                 case TypeCode.Boolean: return Convert.ToBoolean(value, cult);
                 case TypeCode.Byte: return Convert.ToByte(value, cult);
                 case TypeCode.Char: return Convert.ToChar(value, cult);
