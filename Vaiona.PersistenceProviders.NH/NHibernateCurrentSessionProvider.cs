@@ -43,7 +43,10 @@ namespace Vaiona.PersistenceProviders.NH
         {
             ISession session = null;
             ISessionProvider provider = IoCFactory.Container.ResolveForRequest<ISessionProvider>(); // returns a session per http request.
-            session = (ISession)provider.getSession();
+            if (provider != null) // when no http request is available, it may return null
+            {
+                session = (ISession)provider.getSession();
+            }
             return session;
         }
     }

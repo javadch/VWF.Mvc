@@ -192,13 +192,19 @@ namespace Vaiona.PersistenceProviders.NH
             try
             {
                 session = sessionFactory.GetCurrentSession();
+                if(session == null  && openIfNeeded && AppConfiguration.IsWebContext)
+                {
+                    session = createSingletonSession(); // it is used in the cases where no HTTP request context is available and session per HTTP request does not work.
+                }
                 //this flush mode will flush on manual flushes and when transactions are committed.
-                session.FlushMode = FlushMode.Commit;
-                return (session);
+                if (session != null)
+                {
+                    session.FlushMode = FlushMode.Commit;
+                }
             }
             catch
             { }
-            return null;
+            return (session);
         }
 
         private ISession createSession()
@@ -206,6 +212,16 @@ namespace Vaiona.PersistenceProviders.NH
             var session = sessionFactory.OpenSession(cfg.Interceptor);
             //session.Transaction.Begin(System.Data.IsolationLevel.ReadCommitted);
             return session;
+        }
+
+        private static ISession singletonSession = null;
+        private ISession createSingletonSession()
+        {
+            if (singletonSession == null)
+            {
+                singletonSession = sessionFactory.OpenSession(cfg.Interceptor);
+            }            
+            return singletonSession;
         }
 
         private IStatelessSession createStatelessSession()

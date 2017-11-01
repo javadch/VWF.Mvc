@@ -23,18 +23,6 @@ namespace Vaiona.PersistenceProviders.NH
         {
         }
 
-        public bool IsTransient(object proxy)
-        {
-            
-            ISessionImplementor isim = null;
-            if (UoW is NHibernateUnitOfWork)
-                isim = (this.UnitOfWork as NHibernateUnitOfWork).Session.GetSessionImplementation();
-            else if (UoW is NHibernateBulkUnitOfWork)
-                isim = (this.UnitOfWork as NHibernateBulkUnitOfWork).Session.GetSessionImplementation();
-            bool result = NHibernate.Engine.ForeignKeys.IsTransient(proxy.GetType().FullName, proxy, true, isim);
-            return (result);
-        }
-
         //needs more tests
         public TEntity Merge(TEntity entity)
         {

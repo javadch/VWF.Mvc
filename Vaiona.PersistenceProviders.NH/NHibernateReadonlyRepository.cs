@@ -9,6 +9,7 @@ using System.Diagnostics.Contracts;
 using NHibernate.Metadata;
 using Vaiona.Persistence.Api;
 using System.Collections;
+using NHibernate.Engine;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -55,8 +56,22 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
+        public bool IsTransient(object proxy)
+        {
+
+            ISessionImplementor isim = null;
+            if (UoW is NHibernateUnitOfWork)
+                isim = (this.UnitOfWork as NHibernateUnitOfWork).Session.GetSessionImplementation();
+            else if (UoW is NHibernateBulkUnitOfWork)
+                isim = (this.UnitOfWork as NHibernateBulkUnitOfWork).Session.GetSessionImplementation();
+            bool result = NHibernate.Engine.ForeignKeys.IsTransient(proxy.GetType().FullName, proxy, true, isim);
+            return (result);
+        }
+
         public TEntity Reload(TEntity entity)
         {
+            if (entity == null || IsTransient(entity))
+                throw new InvalidOperationException("Passed entity is either NULL or transient.");
             lock (UoW)
             {
                 if (UoW is NHibernateUnitOfWork)
