@@ -72,7 +72,13 @@ namespace Vaiona.Logging
             logEntry.RequestURL = AppConfiguration.CurrentRequestURL.ToString();
 
             // caller method information. indicates where the custom logging function were called
-            StackFrame frame = new StackFrame(2);
+            var frameIndex = 2;
+            StackFrame frame = new StackFrame(frameIndex);
+            while (frame != null && frame.GetMethod().DeclaringType.Assembly.GetName().Name.StartsWith("Vaiona", StringComparison.CurrentCultureIgnoreCase))
+            {
+                frameIndex++;
+                frame = new StackFrame(frameIndex);
+            }
             logEntry.AssemblyName = frame.GetMethod().DeclaringType.Assembly.GetName().Name;//
             logEntry.AssemblyVersion = frame.GetMethod().DeclaringType.Assembly.GetName().Version.ToString();
             logEntry.ClassName = frame.GetMethod().DeclaringType.FullName;
@@ -153,7 +159,7 @@ namespace Vaiona.Logging
         {
             RelationLogEntry logEntry = new RelationLogEntry()
             {
-                LogType = LogType.Data,
+                LogType = LogType.Relation,
                 SourceObjectId = sourceObjectId,
                 SourceObjectType = sourceObjectType,
                 DestinationObjectId = destinationObjectId,
