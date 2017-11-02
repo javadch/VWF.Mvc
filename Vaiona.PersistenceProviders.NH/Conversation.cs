@@ -156,13 +156,13 @@ namespace Vaiona.PersistenceProviders.NH
                     if (!attachedUnits.ContainsKey(session)) // there is no observer, so it's safe to close and collect the session/ resources
                     {
                         //NHibernateCurrentSessionProvider.UnBind(session.SessionFactory);
-                        endSession();
+                        endSession(false);
                     }
                     break;
                 case TypeOfUnitOfWork.Isolated: // single conversation per uow
                     if (session == null || uow == null)
                         return;
-                    endSession();
+                    endSession(true);
                     break;
                 case TypeOfUnitOfWork.Bulk: // single conversation per uow
                     if (stSession == null || uow == null)
@@ -192,7 +192,7 @@ namespace Vaiona.PersistenceProviders.NH
             try
             {
                 session = sessionFactory.GetCurrentSession();
-                if(session == null  && openIfNeeded && AppConfiguration.IsWebContext)
+                if(session == null  && openIfNeeded && !AppConfiguration.IsWebContext)
                 {
                     session = createSingletonSession(); // it is used in the cases where no HTTP request context is available and session per HTTP request does not work.
                 }
@@ -230,7 +230,7 @@ namespace Vaiona.PersistenceProviders.NH
             return session;
         }
 
-        private void endSession()
+        private void endSession(bool disposeSession = false)
         {
             try
             {
@@ -258,13 +258,16 @@ namespace Vaiona.PersistenceProviders.NH
             catch { } // do nothing
             finally
             {
-                //if (session.IsOpen)
-                //    session.Close();
-                //if (showQueries) // do this befoire disposing the session and setting it to null
-                //    Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
-                //session.Dispose();
-                //session = null;
-                //GC.Collect();
+                if (disposeSession)
+                {
+                    if (session.IsOpen)
+                        session.Close();
+                    if (showQueries) // do this befoire disposing the session and setting it to null
+                        Trace.WriteLine("SQL output at:" + DateTime.Now.ToString() + "--> " + "A conversation was closed. ID: " + session.GetHashCode());
+                    session.Dispose();
+                    session = null;
+                    //GC.Collect();
+                }
             }
         }
 
