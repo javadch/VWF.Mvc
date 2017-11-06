@@ -29,6 +29,11 @@ namespace Vaiona.Core.Serialization
 
     public abstract class ObjGraphXmlSerializationBase
     {
+        /// <summary>
+        /// This value is the representation of the NULL value in XML.
+        /// It is used for de/serialization. ANy other applicatio/logic thta accesses the raw XML should handle this case.
+        /// </summary>
+        public static readonly string NULL_VALUE = "_null_null_null";
         protected static Dictionary<Type, IDictionary<string, MemberInfo>> memberInfoCache = new Dictionary<Type, IDictionary<string, MemberInfo>>();        
 
         protected XmlDocument doc = new XmlDocument();

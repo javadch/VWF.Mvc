@@ -88,7 +88,7 @@ namespace Vaiona.Core.Serialization
 
             // check for null
             string value = element.GetAttribute("value");
-            if (value == null) // maybe a check for empty value should also be here
+            if (value == NULL_VALUE)
             {
                 return null;
             }
@@ -127,22 +127,22 @@ namespace Vaiona.Core.Serialization
             switch (Type.GetTypeCode(objType))
             {
                 // there should be a set of checks/ decisions for empty and null values
-                case TypeCode.Boolean: return Convert.ToBoolean(value, cult);
-                case TypeCode.Byte: return Convert.ToByte(value, cult);
-                case TypeCode.Char: return Convert.ToChar(value, cult);
-                case TypeCode.DBNull: return DBNull.Value;
-                case TypeCode.DateTime: return Convert.ToDateTime(value, cult);
-                case TypeCode.Decimal: return Convert.ToDecimal(value, cult);
-                case TypeCode.Double: return Convert.ToDouble(value, cult);
-                case TypeCode.Int16: return Convert.ToInt16(value, cult);
-                case TypeCode.Int32: return Convert.ToInt32(value, cult);
-                case TypeCode.Int64: return Convert.ToInt64(value, cult);
-                case TypeCode.SByte: return Convert.ToSByte(value, cult);
-                case TypeCode.Single: return Convert.ToSingle(value, cult);
-                case TypeCode.String: return value;
-                case TypeCode.UInt16: return Convert.ToUInt16(value, cult);
-                case TypeCode.UInt32: return Convert.ToUInt32(value, cult);
-                case TypeCode.UInt64: return Convert.ToUInt64(value, cult);
+                case TypeCode.Boolean:  return string.IsNullOrEmpty(value) ? (Boolean?)null :   Convert.ToBoolean(value, cult);
+                case TypeCode.Byte:     return string.IsNullOrEmpty(value) ? (Byte?)null :      Convert.ToByte(value, cult);
+                case TypeCode.Char:     return string.IsNullOrEmpty(value) ? (Char?)null :      Convert.ToChar(value, cult);
+                case TypeCode.DBNull:   return DBNull.Value;
+                case TypeCode.DateTime: return string.IsNullOrEmpty(value) ? (DateTime?)null :  Convert.ToDateTime(value, cult);
+                case TypeCode.Decimal:  return string.IsNullOrEmpty(value) ? (Decimal?)null :   Convert.ToDecimal(value, cult);
+                case TypeCode.Double:   return string.IsNullOrEmpty(value) ? (Double?)null :    Convert.ToDouble(value, cult);
+                case TypeCode.Int16:    return string.IsNullOrEmpty(value) ? (Int16?)null :     Convert.ToInt16(value, cult);
+                case TypeCode.Int32:    return string.IsNullOrEmpty(value) ? (Int32?)null :     Convert.ToInt32(value, cult);
+                case TypeCode.Int64:    return string.IsNullOrEmpty(value) ? (Int64?)null :     Convert.ToInt64(value, cult);
+                case TypeCode.SByte:    return string.IsNullOrEmpty(value) ? (SByte?)null :     Convert.ToSByte(value, cult);
+                case TypeCode.Single:   return string.IsNullOrEmpty(value) ? (Single?)null :    Convert.ToSingle(value, cult);
+                case TypeCode.String:   return value;
+                case TypeCode.UInt16:   return string.IsNullOrEmpty(value) ? (UInt16?)null :    Convert.ToUInt16(value, cult);
+                case TypeCode.UInt32:   return string.IsNullOrEmpty(value) ? (UInt32?)null :    Convert.ToUInt32(value, cult);
+                case TypeCode.UInt64:   return string.IsNullOrEmpty(value) ? (UInt64?)null :    Convert.ToUInt64(value, cult);
             }            
 
             // our value
