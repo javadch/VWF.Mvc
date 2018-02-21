@@ -296,17 +296,23 @@ namespace Vaiona.Core.Serialization
             if (typeResolver != null)
             {
                 typeResolver.ResolveType(ref assemblyFullName, ref typeFullName);
-            }            
-
-            if (string.IsNullOrEmpty(assemblyFullName))
-            {
-                // type is directly loadable
-                objType = Type.GetType(typeFullName, true);
             }
-            else
+            try
             {
-                Assembly asm = Assembly.Load(assemblyFullName);
-                objType = asm.GetType(typeFullName, true);
+                if (string.IsNullOrEmpty(assemblyFullName))
+                {
+                    // type is directly loadable
+                    objType = Type.GetType(typeFullName, true);
+                }
+                else
+                {
+                    Assembly asm = Assembly.Load(assemblyFullName);
+                    objType = asm.GetType(typeFullName, true);
+                }
+            }
+            catch
+            {
+                objType = typeof(string);
             }
             return objType;
         }

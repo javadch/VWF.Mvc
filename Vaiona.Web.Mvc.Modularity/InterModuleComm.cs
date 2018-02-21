@@ -216,17 +216,17 @@ namespace Vaiona.Web.Mvc.Modularity
         //    }
         //}
 
-        public static bool IsAccessibale(this HtmlHelper helper, string moduleId, string controllerName, string actionName)
+        public static bool IsAccessible(this HtmlHelper helper, string moduleId, string controllerName, string actionName)
         {
-            return IsAccessibale(moduleId, controllerName, actionName);
+            return IsAccessible(moduleId, controllerName, actionName);
         }
 
-        public static bool IsAccessibale(this Controller helper, string moduleId, string controllerName, string actionName)
+        public static bool IsAccessible(this Controller helper, string moduleId, string controllerName, string actionName)
         {
-            return IsAccessibale(moduleId, controllerName, actionName);
+            return IsAccessible(moduleId, controllerName, actionName);
         }
 
-        public static bool IsAccessibale(string moduleId, string controllerName, string actionName)
+        public static bool IsAccessible(string moduleId, string controllerName, string actionName)
         {
             return ((isModuleCallValid(moduleId) && (isActionCallValid(moduleId, controllerName, actionName))));
         }

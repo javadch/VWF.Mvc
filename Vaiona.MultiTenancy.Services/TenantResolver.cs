@@ -22,7 +22,17 @@ namespace Vaiona.MultiTenancy.Services
 
         public List<Tenant> Manifest { get { return store.Tenants; } }
 
-        public Tenant DefaultTenant { get { return store.Tenants.Where(p => p.IsDefault).SingleOrDefault(); } }
+        public Tenant DefaultTenant
+        {
+            get
+            {
+                if (store.Tenants.Any(p => p.IsDefault))
+                    return store.Tenants.Where(p => p.IsDefault).SingleOrDefault();
+                else if (store.Tenants != null)
+                    return store.Tenants.FirstOrDefault();
+                return null;
+            }
+        }
         public Tenant Resolve(Uri request)
         {
             throw new NotImplementedException();

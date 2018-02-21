@@ -42,7 +42,7 @@ namespace Vaiona.PersistenceProviders.NH
             }
         }
 
-        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries = false)
+        public void Configure(string connectionString = "", string databaseDilect = "DB2Dialect", string fallbackFolder = "Default", bool showQueries = false, bool configureModules = true)
         {
             Contract.Requires(!string.IsNullOrWhiteSpace(databaseDilect));
             this.showQueries = showQueries;
@@ -64,7 +64,12 @@ namespace Vaiona.PersistenceProviders.NH
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
             registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles);
-            registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
+
+            // in some cases such as testing, it maybe needed to isolate the core by preventing the modules to be installed
+            if (configureModules)
+            {
+                registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
+            }
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {

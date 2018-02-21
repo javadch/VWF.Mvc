@@ -13,22 +13,31 @@ namespace Vaiona.IoC
 
         public static void StartContainer(string configFilePath, string containerName, params object[] optionals)
         {
-            if (container == null)
+            try
             {
-                string typeName = AppConfiguration.IoCProviderTypeInfo;
-                Type concreteIoCType = typeof(UnityIoC);
-                try
+                if (container == null)
                 {
-                    concreteIoCType = Type.GetType(typeName);
+                    string typeName = AppConfiguration.IoCProviderTypeInfo;
+                    Type concreteIoCType = typeof(UnityIoC);
+                    try
+                    {
+                        concreteIoCType = Type.GetType(typeName);
+                    }
+                    catch
+                    {
+                        concreteIoCType = typeof(UnityIoC);
+                    } // use the default IoC
+                    container = Activator.CreateInstance(concreteIoCType, configFilePath, containerName, optionals) as IoCContainer;
                 }
-                catch 
+                else
                 {
-                    concreteIoCType = typeof(UnityIoC);
-                } // use the default IoC
-                container = Activator.CreateInstance(concreteIoCType, configFilePath, containerName, optionals) as IoCContainer;
+                    throw new System.TypeLoadException("The IoC container is already loaded. Destroy it first if you want or reconfigure it.");
+                }
             }
-            else
-                throw new InvalidOperationException("The IoC container is already loaded. Destroy it first if you want or reconfigure it.");
+            catch (Exception ex)
+            {
+                throw ex;
+            }
             // Registrations
             //container.RegisterType<myFinanceData, myFinanceData>(new HttpContextLifetimeManager<myFinanceData>());
             //ControllerBuilder.Current.SetControllerFactory(new Vaiona.Web.Controllers.UnityControllerFactory(container));

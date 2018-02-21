@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Threading;
 using System.Security.Principal;
 using System.Web.Security;
+using System.Web.Hosting;
 
 namespace Vaiona.Utils.Cfg
 {
@@ -149,25 +150,46 @@ namespace Vaiona.Utils.Cfg
         {
             get
             {
-                return (AppDomain.CurrentDomain.BaseDirectory);
+                string path = "";
+                try
+                {
+                    path = ConfigurationManager.AppSettings["ApplicationRoot"]; // This key appears in app.conig of unit testing projects only.
+                }
+                catch { }
+                if(string.IsNullOrWhiteSpace(path))
+                    path = AppDomain.CurrentDomain.BaseDirectory;
+                return (path);
+            }
+        }
+
+        public static string AreasPath
+        {
+            get
+            {
+                string path = HostingEnvironment.MapPath("~/Areas");
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    return path;
+                }
+
+                return (Path.Combine(AppRoot, "Areas"));
             }
         }
 
         /// <summary>
         /// DataPath shows the root folder containing business data. 
-        /// Its should be defined in the web.config otherwise it returns the application root folder
+        /// It should be defined in the web.config otherwise it returns a 'data' folder beneath the application's root folder
         /// </summary>
         public static string DataPath
         {
             get
             {
-                string path = AppRoot;
+                string path = Path.Combine(AppRoot, "Data");
                 try
                 {
                     path = ConfigurationManager.AppSettings["DataPath"];
                 }
                 catch{}
-                path = (string.IsNullOrWhiteSpace(path)? AppRoot: path);
                 return (path);
             }
         }

@@ -15,6 +15,8 @@ namespace Vaiona.PersistenceProviders.NH
 {
     public class NHibernateBulkUnitOfWork: IUnitOfWork
     {
+        private const int LongQueryTimeOut = 3600; //seconds
+
         internal Conversation Conversation = null;
         private bool autoCommit = false;
         private bool throwExceptionOnError = true;
@@ -201,10 +203,10 @@ namespace Vaiona.PersistenceProviders.NH
                 result = query.UniqueResult<T>();
                 //session.Transaction.Commit();
             }
-            catch
+            catch (Exception ex)
             {
                 //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
+                throw new Exception(string.Format($"Failed for execute the submitted native query.  Reason: '{ex.Message}'"));
             }
             finally
             {
@@ -223,6 +225,7 @@ namespace Vaiona.PersistenceProviders.NH
                 using (ITransaction transaction = this.Session.BeginTransaction())
                 {
                     IDbCommand command = this.Session.Connection.CreateCommand();
+                    command.CommandTimeout = LongQueryTimeOut;
                     command.Connection = this.Session.Connection;
 
                     transaction.Enlist(command);
@@ -240,10 +243,10 @@ namespace Vaiona.PersistenceProviders.NH
                     transaction.Commit();
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
+                throw new Exception(string.Format($"Failed for execute the submitted native query. Reason: '{ex.Message}'"));
             }
             finally
             {
@@ -279,10 +282,10 @@ namespace Vaiona.PersistenceProviders.NH
                     transaction.Commit();
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
+                throw new Exception(string.Format($"Failed for execute the submitted native query.  Reason: '{ex.Message}'"));
             }
             finally
             {
@@ -310,10 +313,10 @@ namespace Vaiona.PersistenceProviders.NH
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 //session.Transaction.Rollback();
-                throw new Exception(string.Format("Failed for execute the submitted native query."));
+                throw new Exception(string.Format($"Failed for execute the submitted native query.  Reason: '{ex.Message}'"));
             }
             finally
             {

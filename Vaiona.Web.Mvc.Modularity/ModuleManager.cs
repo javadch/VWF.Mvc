@@ -21,7 +21,7 @@ namespace Vaiona.Web.Mvc.Modularity
     public class ModuleManager
     {
         private static Dictionary<string, Assembly> moduleAssemblyCache = new Dictionary<string, Assembly>();
-        public static string DeploymentRoot = HostingEnvironment.MapPath("~/Areas");
+        public static string DeploymentRoot = AppConfiguration.AreasPath;
         private const string catalogFileName = "Modules.Catalog.xml";
         private static FileSystemWatcher watcher = new FileSystemWatcher();
 

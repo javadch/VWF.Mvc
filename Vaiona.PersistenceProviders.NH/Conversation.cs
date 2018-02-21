@@ -192,7 +192,7 @@ namespace Vaiona.PersistenceProviders.NH
             try
             {
                 session = sessionFactory.GetCurrentSession();
-                if(session == null  && openIfNeeded && !AppConfiguration.IsWebContext)
+                if(session == null  && openIfNeeded) // && !AppConfiguration.IsWebContext)
                 {
                     session = createSingletonSession(); // it is used in the cases where no HTTP request context is available and session per HTTP request does not work.
                 }
@@ -204,6 +204,8 @@ namespace Vaiona.PersistenceProviders.NH
             }
             catch
             { }
+            if (session == null)
+                throw new Exception("Could not acquire a session to access the data.");
             return (session);
         }
 

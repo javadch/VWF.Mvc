@@ -72,10 +72,11 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="Vaiona.Entities">
-      <HintPath>C:\Users\standard\Source\BExIS\Core\Repos\Code\Libraries\Vaiona\Vaiona.Entities.dll</HintPath>
+      <HintPath>..\Vaiona.Entities\bin\Debug\Vaiona.Entities.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IModuleSeedDataGenerator.cs" />
     <Compile Include="InterModuleComm.cs" />
     <Compile Include="ModularMvcRouteHandler.cs" />
     <Compile Include="ModuleBase.cs" />
