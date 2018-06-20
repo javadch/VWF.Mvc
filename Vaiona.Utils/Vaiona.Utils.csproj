@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cfg\AppConfiguration.cs" />
+    <Compile Include="Cfg\Settings.cs" />
     <Compile Include="IO\FileHelper.cs" />
     <Compile Include="Perisan\DateTimeExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

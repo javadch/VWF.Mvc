@@ -58,6 +58,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 LoggerFactory.GetFileLogger().LogCustom(message);
                 throw new Exception(message);
             }
+            this.Settings = new ModuleSettings(moduleId);
         }
 
         //private string resovlePath(string moduleId)
@@ -65,6 +66,7 @@ namespace Vaiona.Web.Mvc.Modularity
         //    throw new NotImplementedException();
         //}
 
+        public ModuleSettings Settings { get; set; }
         public string Name
         {
             get { return Metadata.Manifest.Name; }

@@ -49,7 +49,24 @@ namespace Vaiona.Web.Mvc.Modularity
                 throw new DirectoryNotFoundException("Areas");
         }
 
+        /// <summary>
+        /// This method will be automatically called during application startup at pre-init phase
+        /// </summary>
         public static void Initialize()
+        {
+            initialize();
+        }
+
+        /// <summary>
+        /// This overload (of Initialize)
+        /// </summary>
+        /// <param name="force"></param>
+        public static void Initialize(bool force)
+        {
+            initialize();
+        }
+
+        private static void initialize()
         {
 //#if DEBUG
             // Gets a value that indicates whether the hosting environment has access to the ASP.NET build system.

@@ -85,6 +85,7 @@
     <Compile Include="ModuleBootstrapper.cs" />
     <Compile Include="ModuleInitializer.cs" />
     <Compile Include="ModuleManager.cs" />
+    <Compile Include="ModuleSettings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
