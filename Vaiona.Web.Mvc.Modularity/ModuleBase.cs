@@ -30,7 +30,7 @@ namespace Vaiona.Web.Mvc.Modularity
             LoggerFactory.GetFileLogger().LogCustom(string.Format("Instantiating module '{0}'", moduleId));
             load(moduleId);
             RegisterModuleRoute("default", DefaultRoute);
-            LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfuly instantiated.", moduleId));
+            LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfully instantiated.", moduleId));
         }
 
         private void load(string moduleId)
@@ -127,7 +127,7 @@ namespace Vaiona.Web.Mvc.Modularity
                     //new { action = "Index", id = UrlParameter.Optional }
                     ).RouteHandler = routeItem.Value.RouteHandler;// new ModularMvcRouteHandler(AreaName);
                 }
-                LoggerFactory.GetFileLogger().LogCustom(string.Format("The area for module '{0}' was successfuly registered.", moduleId));
+                LoggerFactory.GetFileLogger().LogCustom(string.Format("The area for module '{0}' was successfully registered.", moduleId));
             }
             catch (Exception ex)
             {
