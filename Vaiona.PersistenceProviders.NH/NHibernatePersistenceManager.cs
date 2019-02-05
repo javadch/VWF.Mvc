@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Vaiona.Web.Mvc.Modularity;
 using Vaiona.IoC;
+using Vaiona.Logging;
 
 namespace Vaiona.PersistenceProviders.NH
 {
@@ -52,23 +53,34 @@ namespace Vaiona.PersistenceProviders.NH
 
             string configFileName = string.Format(@"{0}.hibernate.cfg.xml", databaseDilect);
             string configFileFullPath = Path.Combine(AppConfiguration.WorkspaceGeneralRoot, "Db", "Settings", configFileName);
-            cfg = new Configuration();
-            cfg.Configure(configFileFullPath);
-            if (showQueries)
-                cfg.SetInterceptor(new NHInterceptor());
 
+            LoggerFactory.GetFileLogger().LogCustom($"Configuring the persistence and trying to connect to the database using '{configFileFullPath}'");
+            cfg = new Configuration();
+            try
+            {
+                cfg.Configure(configFileFullPath);
+                LoggerFactory.GetFileLogger().LogCustom($"The persistence was configured successfully.");
+
+                if (showQueries)
+                    cfg.SetInterceptor(new NHInterceptor());
+            }
+            catch(Exception ex)
+            {
+                LoggerFactory.GetFileLogger().LogCustom($"Failed to configure the persistence, see details: '{ex.Message}'");
+                throw ex;
+            }
             // Tells NHibernate to use the provided class as the current session provider (CurrentSessionContextClass).
             // This way the sessionFactory.GetCurrentSession will call the CurrentSession method of this class.
             cfg.Properties[NHibernate.Cfg.Environment.CurrentSessionContextClass] = typeof(NHibernateCurrentSessionProvider).AssemblyQualifiedName;
 
             // in case of having specific queries or mappings for different dialects, it is better (and possible) 
             // to develop different mapping files and externalizing queries
-            registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles);
+            registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceComponentRoot, ref componentPostInstallationFiles, false);
 
             // in some cases such as testing, it maybe needed to isolate the core by preventing the modules to be installed
             if (configureModules)
             {
-                registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles);
+                registerMappings(cfg, fallbackFolder, databaseDilect, AppConfiguration.WorkspaceModulesRoot, ref modulePostInstallationFiles, true);
             }
 
             if (!string.IsNullOrWhiteSpace(connectionString))
@@ -254,10 +266,13 @@ namespace Vaiona.PersistenceProviders.NH
                 if (isModule) // its is module, so the module's entity container assembly should also be added
                 {
                     string moduleId = moduleOrComponentDir.Name.ToLower();
-                    if (ModuleManager.Exists(moduleId))
+                    // the module owning the Db mappings must have been loaded, otherwise the mapping will fail by not finding the corresponding entities.
+                    if (ModuleManager.Exists(moduleId) && ModuleManager.IsLoaded(moduleId))
                     {
                         List<FileInfo> mappingFiles = compileMappingFileList(moduleOrComponentDir, fallbackFoler, dialect, ref post);
                         mappingFiles.ForEach(p => cfg.AddFile(p));
+                        // obtain the list of assemblies that contain the entity classes and load them.
+                        // in a normal scenario, these assemblies should have been already loaded by the Module Initializer, but here the task is done again as a safefuard.
                         var asmElement = ModuleManager.GetModuleInfo(moduleOrComponentDir.Name.ToLower())
                                             .Manifest.ManifestDoc.Element("Assemblies").Elements("Assmebly")
                                             .Where(p => p.Attribute("role").Value.Equals("Entity", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();

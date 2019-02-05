@@ -49,9 +49,26 @@ namespace Vaiona.Web.Mvc.Modularity
                 throw new DirectoryNotFoundException("Areas");
         }
 
+        /// <summary>
+        /// This method will be automatically called during application startup at pre-init phase
+        /// </summary>
         public static void Initialize()
         {
-            //#if DEBUG
+            initialize();
+        }
+
+        /// <summary>
+        /// This overload (of Initialize)
+        /// </summary>
+        /// <param name="force"></param>
+        public static void Initialize(bool force)
+        {
+            initialize();
+        }
+
+        private static void initialize()
+        {
+//#if DEBUG
             // Gets a value that indicates whether the hosting environment has access to the ASP.NET build system.
             if (HostingEnvironment.InClientBuildManager)
             {
@@ -61,23 +78,24 @@ namespace Vaiona.Web.Mvc.Modularity
             //#endif
             LoggerFactory.GetFileLogger().LogCustom(string.Format("Preparing to initialize the registered modules..."));
             XElement catalog = null;
-            List<XElement> activeModules = new List<XElement>();
+            List<XElement> modules = new List<XElement>();
             try
             {
                 catalog = XElement.Load(Path.Combine(AppConfiguration.WorkspaceModulesRoot, "Modules.Catalog.xml"));
                 List<string> validStates = new List<string>() { "Active", "Inactive", "Pending" };
-                activeModules = catalog.Elements("Module")
+                modules = catalog.Elements("Module")
                                     .Where(m => validStates.Any(p => p.Equals(m.Attribute("status").Value, StringComparison.InvariantCultureIgnoreCase)))
+                                    .OrderBy(m=> int.Parse(m.Attribute("order").Value))
                                     .ToList();
             }
             catch (Exception ex)
             {
-                string message = string.Format("Could not load the modules' catalog file from '{0}' or it is not a vlaid XML file. See the datined message: {1}.", AppConfiguration.WorkspaceModulesRoot, ex.Message);
+                string message = string.Format("Could not load the modules' catalog file from the '{0}' folder or the catalog is not a vlaid XML file. See the detailed message: {1}.", AppConfiguration.WorkspaceModulesRoot, ex.Message);
                 LoggerFactory.GetFileLogger().LogCustom(message);
                 throw new Exception(message, ex);
             }
 
-            foreach (var moduleEntry in activeModules)
+            foreach (var moduleEntry in modules)
             //foreach (var moduleDir in areasFolder.GetDirectories())
             {
                 string moduleId = moduleEntry.Attribute("id").Value;
@@ -85,25 +103,34 @@ namespace Vaiona.Web.Mvc.Modularity
                 LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing module '{0}'.", moduleId));
                 if (string.IsNullOrWhiteSpace(moduleId))
                     break;
+                try
+                {
 
-                string dirPath = (string.IsNullOrEmpty(moduleUIPath)) ? moduleId : Path.Combine(moduleId, moduleUIPath);
+                    string dirPath = (string.IsNullOrEmpty(moduleUIPath)) ? moduleId : Path.Combine(moduleId, moduleUIPath);
 
                 var moduleDir = areasFolder.GetDirectories(dirPath, SearchOption.TopDirectoryOnly).FirstOrDefault();
                 if (moduleDir == null || !moduleDir.Exists)
-                    break;
+                        throw new DirectoryNotFoundException();
+                }
+                catch (Exception ex)
+                {
+                    var message = $"Could not find module '{moduleId}' in folder {areasFolder.FullName}. Root cause: {ex.Message}";
+                    LoggerFactory.GetFileLogger().LogCustom(message);
+                    throw new Exception(message);
+                }
 
                 // string manifestFileName = string.Format("{0}.Manifest.xml", moduleDir.Name);
                 string manifestFileName = string.Format("{0}.Manifest.xml", moduleId.ToUpper());
                 if (moduleDir.GetFiles(manifestFileName, SearchOption.TopDirectoryOnly).Count() == 1)
                 {
-                    var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First();
+                    var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First(); // it is supposed to throw an exception if the bin folder does not exist.
                     LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing dependent assemblies for module '{0}'.", moduleId));
                     loadSatelliteAssemblies(moduleId, moduleDir, moduleBinFolder);
 
                     LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing UI assembly for module '{0}'.", moduleId));
                     loadEntryAssembly(moduleId.ToUpper(), moduleDir, moduleBinFolder);
 
-                    LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfuly initialized.", moduleId));
+                    LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfully initialized.", moduleId));
                 }
                 else
                 {
@@ -206,26 +233,35 @@ namespace Vaiona.Web.Mvc.Modularity
                                                             .FirstOrDefault();
                         if (assemblyName == null)
                             break; // should throw an exception!
-                        var asm = Assembly.Load(assemblyName);
-                        LoggerFactory.GetFileLogger().LogCustom(string.Format("Assembly '{0}' was loaded for module '{1}'.", assemblyName.Name, moduleId));
-                        //Add the plugin's satellite assembly as a reference to the application
                         try
                         {
-                            BuildManager.AddReferencedAssembly(asm);
-                            LoggerFactory.GetFileLogger().LogCustom(string.Format("Assembly '{0}' was added to the build manager for module '{1}'.", assemblyName.Name, moduleId));
+                            var asm = Assembly.Load(assemblyName);
+                            LoggerFactory.GetFileLogger().LogCustom(string.Format("Assembly '{0}' was loaded for module '{1}'.", assemblyName.Name, moduleId));
+                            //Add the plugin's satellite assembly as a reference to the application
+                            try
+                            {
+                                BuildManager.AddReferencedAssembly(asm);
+                                LoggerFactory.GetFileLogger().LogCustom(string.Format("Assembly '{0}' was added to the build manager for module '{1}'.", assemblyName.Name, moduleId));
+                            }
+                            catch (Exception)
+                            { // it is aleady added
+                              //string message = string.Format("Assembly '{0}' is already registered and loaded. It may have a strong depenedcy from a module or from the shell, Or more than one manifest files are registering it!", assemblyName.FullName);
+                              //LoggerFactory.GetFileLogger().LogCustom(message);
+                              //throw new Exception(message);
+                            }
+                            ModuleManager.CacheAssembly(asmName, asm);
                         }
-                        catch (Exception)
-                        { // it is aleady added
-                            //string message = string.Format("Assembly '{0}' is already registered and loaded. It may have a strong depenedcy from a module or from the shell, Or more than one manifest files are registering it!", assemblyName.FullName);
-                            //LoggerFactory.GetFileLogger().LogCustom(message);
-                            //throw new Exception(message);
+                        catch(Exception ex)
+                        {
+                            LoggerFactory.GetFileLogger().LogCustom($"Could not load the assembly {asmName} for module '{moduleId}'. Roor cause: {ex.Message}");
+                            throw ex;
                         }
-                        ModuleManager.CacheAssembly(asmName, asm);
                     }
                 }
                 catch (Exception ex)
                 { // Do nothing
-                    LoggerFactory.GetFileLogger().LogCustom(string.Format("Could not load the manifest file for module '{0}'. No dependent assembly loaded!", moduleId));
+                    LoggerFactory.GetFileLogger().LogCustom($"Could not load the manifest file for module '{moduleId}'. No dependent assembly loaded!");
+                    throw ex;
                 }
             }
         }

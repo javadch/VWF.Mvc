@@ -58,12 +58,35 @@ namespace Vaiona.Model.MTnt
         /// The layout must have its accompanying layout.xml
         /// </summary>
         public string Layout { get; set; }
-        
+
         /// <summary>
-        /// The default's tenant landing page, if nor provided.
+        /// The default's tenant landing page in the forms of moduleId, controllerName, actionName.
+        /// If not provided, the one from the general setting will be used
         /// It can not be an external url.
         /// </summary>
-        public string LandingPage { get; set; }
+        /// <remarks>Langing page must be registered in the modules manifest menu structure and proper security permissions should also be set.</remarks>
+        private string landingPage;
+        public string LandingPage
+        {
+            get { return landingPage; }
+            set
+            {
+                if(string.IsNullOrWhiteSpace(landingPage) || landingPage.Equals("/") || !landingPage.Contains(","))
+                {
+                    landingPage = value;
+                }
+            }
+        }
+
+        public Tuple<string, string, string> LandingPageTuple
+        {
+            get
+            {
+                string[] elements = landingPage.Split(',');
+                Tuple<string, string, string> tuple = new Tuple<string, string, string>(elements[0].Trim(), elements[1].Trim(), elements[2].Trim());
+                return tuple;
+            }
+        }
 
         /// <summary>
         /// Extended menus are links to external URLs and presented differently (comparing to the built-in menus) to the tenant's users
