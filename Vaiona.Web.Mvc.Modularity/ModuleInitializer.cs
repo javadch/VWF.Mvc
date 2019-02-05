@@ -68,7 +68,7 @@ namespace Vaiona.Web.Mvc.Modularity
 
         private static void initialize()
         {
-//#if DEBUG
+            //#if DEBUG
             // Gets a value that indicates whether the hosting environment has access to the ASP.NET build system.
             if (HostingEnvironment.InClientBuildManager)
             {
@@ -85,7 +85,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 List<string> validStates = new List<string>() { "Active", "Inactive", "Pending" };
                 modules = catalog.Elements("Module")
                                     .Where(m => validStates.Any(p => p.Equals(m.Attribute("status").Value, StringComparison.InvariantCultureIgnoreCase)))
-                                    .OrderBy(m=> int.Parse(m.Attribute("order").Value))
+                                    .OrderBy(m => int.Parse(m.Attribute("order").Value))
                                     .ToList();
             }
             catch (Exception ex)
@@ -103,13 +103,16 @@ namespace Vaiona.Web.Mvc.Modularity
                 LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing module '{0}'.", moduleId));
                 if (string.IsNullOrWhiteSpace(moduleId))
                     break;
+
+                DirectoryInfo moduleDir = null;
+
                 try
                 {
 
                     string dirPath = (string.IsNullOrEmpty(moduleUIPath)) ? moduleId : Path.Combine(moduleId, moduleUIPath);
 
-                var moduleDir = areasFolder.GetDirectories(dirPath, SearchOption.TopDirectoryOnly).FirstOrDefault();
-                if (moduleDir == null || !moduleDir.Exists)
+                    moduleDir = areasFolder.GetDirectories(dirPath, SearchOption.TopDirectoryOnly).FirstOrDefault();
+                    if (moduleDir == null || !moduleDir.Exists)
                         throw new DirectoryNotFoundException();
                 }
                 catch (Exception ex)
@@ -251,7 +254,7 @@ namespace Vaiona.Web.Mvc.Modularity
                             }
                             ModuleManager.CacheAssembly(asmName, asm);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             LoggerFactory.GetFileLogger().LogCustom($"Could not load the assembly {asmName} for module '{moduleId}'. Roor cause: {ex.Message}");
                             throw ex;
