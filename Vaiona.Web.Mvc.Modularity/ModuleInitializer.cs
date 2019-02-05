@@ -51,14 +51,14 @@ namespace Vaiona.Web.Mvc.Modularity
 
         public static void Initialize()
         {
-//#if DEBUG
+            //#if DEBUG
             // Gets a value that indicates whether the hosting environment has access to the ASP.NET build system.
             if (HostingEnvironment.InClientBuildManager)
             {
                 LoggerFactory.GetFileLogger().LogCustom(string.Format("Hosting environenment is set as 'InClientBuildManager', which prevents modules from being initialized!"));
                 return;
             }
-//#endif
+            //#endif
             LoggerFactory.GetFileLogger().LogCustom(string.Format("Preparing to initialize the registered modules..."));
             XElement catalog = null;
             List<XElement> activeModules = new List<XElement>();
@@ -81,14 +81,19 @@ namespace Vaiona.Web.Mvc.Modularity
             //foreach (var moduleDir in areasFolder.GetDirectories())
             {
                 string moduleId = moduleEntry.Attribute("id").Value;
+                string moduleUIPath = moduleEntry.Attribute("path")?.Value;
                 LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing module '{0}'.", moduleId));
                 if (string.IsNullOrWhiteSpace(moduleId))
                     break;
-                var moduleDir = areasFolder.GetDirectories(moduleId, SearchOption.TopDirectoryOnly).FirstOrDefault();
+
+                string dirPath = (string.IsNullOrEmpty(moduleUIPath)) ? moduleId : Path.Combine(moduleId, moduleUIPath);
+
+                var moduleDir = areasFolder.GetDirectories(dirPath, SearchOption.TopDirectoryOnly).FirstOrDefault();
                 if (moduleDir == null || !moduleDir.Exists)
                     break;
 
-                string manifestFileName = string.Format("{0}.Manifest.xml", moduleDir.Name);
+                // string manifestFileName = string.Format("{0}.Manifest.xml", moduleDir.Name);
+                string manifestFileName = string.Format("{0}.Manifest.xml", moduleId.ToUpper());
                 if (moduleDir.GetFiles(manifestFileName, SearchOption.TopDirectoryOnly).Count() == 1)
                 {
                     var moduleBinFolder = moduleDir.GetDirectories("bin", SearchOption.TopDirectoryOnly).First();
@@ -96,7 +101,7 @@ namespace Vaiona.Web.Mvc.Modularity
                     loadSatelliteAssemblies(moduleId, moduleDir, moduleBinFolder);
 
                     LoggerFactory.GetFileLogger().LogCustom(string.Format("Initializing UI assembly for module '{0}'.", moduleId));
-                    loadEntryAssembly(moduleDir, moduleBinFolder);
+                    loadEntryAssembly(moduleId.ToUpper(), moduleDir, moduleBinFolder);
 
                     LoggerFactory.GetFileLogger().LogCustom(string.Format("Module '{0}' was successfuly initialized.", moduleId));
                 }
@@ -109,18 +114,18 @@ namespace Vaiona.Web.Mvc.Modularity
             }
         }
 
-        private static void loadEntryAssembly(DirectoryInfo moduleDir, DirectoryInfo moduleBinFolder)
+        private static void loadEntryAssembly(string moduleId, DirectoryInfo moduleDir, DirectoryInfo moduleBinFolder)
         {
             try
             {
                 // for each module get its main assembly, the one that contains the type inheritted from the ModuleBase
-                string assemblyNamePattern = string.Format("*.{0}.UI.dll", moduleDir.Name);
+                string assemblyNamePattern = string.Format("*.{0}.UI.dll", moduleId);
                 var assemblyName = moduleBinFolder.GetFiles(assemblyNamePattern, SearchOption.TopDirectoryOnly)
                                                     .Select(x => AssemblyName.GetAssemblyName(x.FullName))
                                                     .FirstOrDefault();
                 if (assemblyName == null)
                 {
-                    string message = string.Format("Could not find assembly '{0}' for module '{1}' in '{2}'.", assemblyName.FullName, moduleDir, moduleBinFolder.FullName);
+                    string message = string.Format("Could not find assembly '{0}' for module '{1}' in '{2}'.", assemblyName.FullName, moduleId, moduleBinFolder.FullName);
                     LoggerFactory.GetFileLogger().LogCustom(message);
                     throw new Exception(message);
                 }
@@ -133,7 +138,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 if (type != null)
                 {
                     ModuleInfo moduleMetadata = new ModuleInfo();
-                    moduleMetadata.Id = moduleDir.Name;
+                    moduleMetadata.Id = moduleId;
                     moduleMetadata.EntryType = type;
                     // instance will be created later with the area registration
                     //var plugin = (ModuleBase)Activator.CreateInstance(type);

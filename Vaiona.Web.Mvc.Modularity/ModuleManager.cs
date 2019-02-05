@@ -1,20 +1,16 @@
-﻿using System;
+﻿using Ionic.Zip;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
-using System.Web.Hosting;
+using System.Web.Mvc;
 using System.Web.Routing;
 using System.Xml.Linq;
+using Vaiona.Logging;
 using Vaiona.Utils.Cfg;
 using Vaiona.Utils.IO;
-using Ionic.Zip;
-using Vaiona.Logging;
-using System.Web.Mvc;
-using System.Web.Http;
 
 namespace Vaiona.Web.Mvc.Modularity
 {
@@ -144,7 +140,7 @@ namespace Vaiona.Web.Mvc.Modularity
             var moduleIds = from element in catalog.Elements("Module")
                             orderby int.Parse(element.Attribute("order").Value) // apply ordering, it may affect the order of menu items in the UI
                             select element.Attribute("id").Value;
-                            
+
             foreach (var moduleId in moduleIds)
             {
                 if (IsActive(moduleId) && IsLoaded(moduleId))
@@ -161,7 +157,7 @@ namespace Vaiona.Web.Mvc.Modularity
 
         private static void resolveNameConflicts(XElement node)
         {
-            if(node.Elements() != null)
+            if (node.Elements() != null)
             {
                 // check for identical titles, and prefix them with the moduleID if found 
                 foreach (var current in node.Elements("Export"))
@@ -184,7 +180,7 @@ namespace Vaiona.Web.Mvc.Modularity
                         }
                     }
                     // when done comaring to all the siblings, apply the needed changes to the current node.
-                    if(currentMustChange)
+                    if (currentMustChange)
                     {
                         // set the current node's title
                         if (!string.IsNullOrWhiteSpace(current.Attribute("area").Value)) // Shell items are not prefixed
@@ -247,13 +243,13 @@ namespace Vaiona.Web.Mvc.Modularity
                     export.SetAttributeValue("order", current.Elements() != null ? current.Elements().Count() + 1 : 1);
                 // locate the child node that the export point should be added before it.
                 XElement insertBeforeThis = null;
-                if(current.Elements() != null)
+                if (current.Elements() != null)
                 {
                     int exportOrder = int.Parse(export.Attribute("order").Value);
                     foreach (var child in current.Elements("Export"))
                     {
                         int childOrder = int.Parse(child.Attribute("order").Value);
-                        if(exportOrder < childOrder) // only <, because this export node is coming later, so in case of =, the existing one has precedence.
+                        if (exportOrder < childOrder) // only <, because this export node is coming later, so in case of =, the existing one has precedence.
                         {
                             insertBeforeThis = child;
                             break;
@@ -320,7 +316,7 @@ namespace Vaiona.Web.Mvc.Modularity
             // set the status to pending.
             // load the assembly? may need restart
             // install the routes, etc.
-                        
+
             string moduleName = "";
             string moduleVersion = "";
             string installationPath = Path.Combine(AppConfiguration.WorkspaceModulesRoot, "installing");
@@ -368,11 +364,11 @@ namespace Vaiona.Web.Mvc.Modularity
         public static bool HasPendingInstallation()
         {
             var pendingModules = from m in catalog.Elements("Module")
-                                    where m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
-                                    select m;
+                                 where m.Attribute("status").Value.Equals("Pending", StringComparison.InvariantCultureIgnoreCase)
+                                 select m;
             return (pendingModules.Count() > 0);
         }
-        
+
         /// <summary>
         /// Lists the modules thata re currently in the pending state.
         /// Pending state indicates that the module is in installation process.
@@ -450,7 +446,7 @@ namespace Vaiona.Web.Mvc.Modularity
         public static void Enable(string moduleId, bool updateCatalog = true)
         {
             setStatus(moduleId, "active", updateCatalog);
-            if(updateCatalog == true)
+            if (updateCatalog == true)
             {
                 BuildExportTree();
             }
@@ -493,7 +489,7 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             if (moduleInfos.Count(p => p.Id.Equals(moduleMetadata.Id, StringComparison.InvariantCultureIgnoreCase)) > 0)
                 return;
-			moduleMetadata.Manifest = loadManifest(moduleMetadata.Id);
+            moduleMetadata.Manifest = loadManifest(moduleMetadata.Id, moduleMetadata.Path.FullName);
             moduleInfos.Add(moduleMetadata);
             // add the current module's exports to the ModuleManager export ExportTree.
             //buildModuleExportTree(moduleMetadata.Id);
@@ -509,8 +505,8 @@ namespace Vaiona.Web.Mvc.Modularity
             var moduleInfo = get(moduleId);
             if (moduleInfo != null && moduleInfo.Manifest != null)
                 return moduleInfo.Manifest;
-            
-			return loadManifest(moduleId);
+
+            return loadManifest(moduleInfo.Id, moduleInfo.Path.FullName);
         }
 
         public static void CacheAssembly(string assemblyName, Assembly assembly)
@@ -578,7 +574,7 @@ namespace Vaiona.Web.Mvc.Modularity
         {
             foreach (var module in moduleInfos)
             {
-                if(module != null && module.Plugin != null)
+                if (module != null && module.Plugin != null)
                 {
                     module.Plugin.Shutdown();
                 }
@@ -696,7 +692,7 @@ namespace Vaiona.Web.Mvc.Modularity
             }
 
             // in debug mode, there is no need to copy the files because they are already in the right place and more importantly the bundle will overwite the sources!
-           
+
             if (installForProduction)
             {
                 //move the workspace, if exists in the bundle
@@ -727,7 +723,7 @@ namespace Vaiona.Web.Mvc.Modularity
                 // move whatever else that needs to go to a place other than the module's root
 
                 // move whatever is remained to the module's root. This should include bin, Content, Scripts, and Views folder plus the manifest file.
-                string moduleDepolymentPath = Path.Combine(ModuleManager.DeploymentRoot, moduleName); 
+                string moduleDepolymentPath = Path.Combine(ModuleManager.DeploymentRoot, moduleName);
                 try
                 {
                     if (Directory.Exists(moduleDepolymentPath))
@@ -756,7 +752,8 @@ namespace Vaiona.Web.Mvc.Modularity
 
         private static void cleanUpInstallation(string moduleName, string moduleVersion, string installationPath)
         {
-            try { 
+            try
+            {
                 // delete the uploaded zip bundle
                 Directory.GetFiles(installationPath, string.Format("{0}_*.zip", moduleName)).ToList()
                     .ForEach(p => File.Delete(p));
@@ -802,13 +799,13 @@ namespace Vaiona.Web.Mvc.Modularity
                 .FirstOrDefault();
             return entry;
         }
-		
-		private static ModuleManifest loadManifest(string moduleId)
-		{
-			string manifestPath = Path.Combine(ModuleManager.DeploymentRoot, moduleId, string.Format("{0}.Manifest.xml", moduleId));
+
+        private static ModuleManifest loadManifest(string id, string path)
+        {
+            string manifestPath = Path.Combine(path, string.Format("{0}.Manifest.xml", id));
             ModuleManifest manifest = new ModuleManifest(manifestPath);
             return manifest;
-		}
+        }
     }
 
 }
