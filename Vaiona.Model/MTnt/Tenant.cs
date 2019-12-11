@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
-using Vaiona.Utils.Cfg;
 
 namespace Vaiona.Model.MTnt
 {
@@ -25,12 +21,12 @@ namespace Vaiona.Model.MTnt
         /// the abbreviation of the tenant 
         /// </summary>
         public string ShortName { get; set; }
-        
+
         /// <summary>
         /// A one short line slogan style, used in brower tabs and information section along with the short name
         /// </summary>
         public string Title { get; set; }
-        
+
         /// <summary>
         /// A one paragraph descrotion of the tenant
         /// </summary>
@@ -71,7 +67,7 @@ namespace Vaiona.Model.MTnt
             get { return landingPage; }
             set
             {
-                if(string.IsNullOrWhiteSpace(landingPage) || landingPage.Equals("/") || !landingPage.Contains(","))
+                if (string.IsNullOrWhiteSpace(landingPage) || landingPage.Equals("/") || !landingPage.Contains(","))
                 {
                     landingPage = value;
                 }
@@ -95,7 +91,7 @@ namespace Vaiona.Model.MTnt
         public List<XElement> Resources { get; set; }
 
         public TenantStatus Status { get; set; }
-        
+
         /// <summary>
         /// One or more matching rules to resolve the tenant.
         /// The matching rules are regular expressions to be examined against the incoming http request.
@@ -103,6 +99,7 @@ namespace Vaiona.Model.MTnt
         public List<string> MatchingRules { get; set; }
         public bool IsDefault { get; set; }
         public string PolicyFileName { get; set; }
+        public string TermsAndConditionsFileName { get; set; }
         public string ContactUsFileName { get; set; }
         public string ImprintFileName { get; set; }
         public string ContactEmail { get; set; }
@@ -117,7 +114,7 @@ namespace Vaiona.Model.MTnt
                 else
                     return PathProvider.GetImagePath(this.Id, this.Logo, this.Id); // The second this.Id argument is passed to allow the Client TenantPathProviders to have a chance of getting triggered.
             }
-        } 
+        }
         public string FavIconPath //effective path to FavIcon
         {
             get
@@ -148,6 +145,17 @@ namespace Vaiona.Model.MTnt
                     return PathProvider.GetContentFilePath(this.Id, this.PolicyFileName, Fallback.Id);
                 else
                     return PathProvider.GetContentFilePath(this.Id, this.PolicyFileName, this.Id);
+            }
+        }
+
+        public string TermsAndConditionsFileNamePath //effective path to policy content file
+        {
+            get
+            {
+                if (this.UseFallback == true && this.Fallback != null)
+                    return PathProvider.GetContentFilePath(this.Id, this.TermsAndConditionsFileName, Fallback.Id);
+                else
+                    return PathProvider.GetContentFilePath(this.Id, this.TermsAndConditionsFileName, this.Id);
             }
         }
 
@@ -182,13 +190,14 @@ namespace Vaiona.Model.MTnt
             XElement xResource = this.Resources.Where(p => p.Attribute("key").Value.Equals(resourceKey, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
             if (xResource == null || string.IsNullOrWhiteSpace(xResource.Attribute("key").Value))
                 return null;
-            if("image".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
+            if ("image".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
             {
                 if (this.UseFallback == true && this.Fallback != null)
                     return PathProvider.GetImagePath(this.Id, xResource.Attribute("id").Value, Fallback.Id);
                 else
                     return PathProvider.GetImagePath(this.Id, xResource.Attribute("id").Value, this.Id); // The second this.Id argument is passed to allow the Client TenantPathProviders to have a chance of getting triggered.
-            } else if ("content".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
+            }
+            else if ("content".Equals(xResource.Attribute("contentType").Value, StringComparison.InvariantCultureIgnoreCase))
             {
                 if (this.UseFallback == true && this.Fallback != null)
                     return PathProvider.GetContentFilePath(this.Id, xResource.Attribute("id").Value, Fallback.Id);

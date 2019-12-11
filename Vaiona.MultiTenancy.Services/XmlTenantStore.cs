@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Vaiona.Model.MTnt;
 using Vaiona.Utils.Cfg;
@@ -19,7 +17,9 @@ namespace Vaiona.MultiTenancy.Services
     /// So that it is injected into the resolver/registrar at runtime using the IoC.</remarks>
     public class XmlTenantStore
     {
-        internal string CatalogFilePath { get
+        internal string CatalogFilePath
+        {
+            get
             {
                 return Path.Combine(AppConfiguration.WorkspaceTenantsRoot, "tenants.catalog.xml");
             }
@@ -44,7 +44,7 @@ namespace Vaiona.MultiTenancy.Services
             if (!string.IsNullOrWhiteSpace(defaultTenant.Id))
             {
                 tenants.Add(LoadTenant(defaultTenant.Id, null)); // the default tenant must be loaded first
-                catalog.Where(p=> defaultTenant.Id != p.Id).ToList() // other manifests, except the default one. It is already loaded
+                catalog.Where(p => defaultTenant.Id != p.Id).ToList() // other manifests, except the default one. It is already loaded
                     .ForEach(p => tenants.Add(LoadTenant(p.Id, defaultTenant)));
             }
             else
@@ -71,7 +71,8 @@ namespace Vaiona.MultiTenancy.Services
                 try
                 {
                     tenant.Id = xTenant.Attribute("id").Value;
-                }catch { throw new Exception("One of the tenants in the root manifest file has a missing identifier!"); }
+                }
+                catch { throw new Exception("One of the tenants in the root manifest file has a missing identifier!"); }
                 try
                 {
                     tenant.IsDefault = bool.Parse(xTenant.Attribute("default").Value);
@@ -79,9 +80,10 @@ namespace Vaiona.MultiTenancy.Services
                 catch { tenant.IsDefault = false; }
                 try
                 {
-                    tenant.Status = "active".Equals(xTenant.Attribute("status").Value, StringComparison.InvariantCultureIgnoreCase) 
-                        ? TenantStatus.Active : TenantStatus.Inactive; 
-                }catch { tenant.Status = TenantStatus.Inactive; }
+                    tenant.Status = "active".Equals(xTenant.Attribute("status").Value, StringComparison.InvariantCultureIgnoreCase)
+                        ? TenantStatus.Active : TenantStatus.Inactive;
+                }
+                catch { tenant.Status = TenantStatus.Inactive; }
                 tenants.Add(tenant);
             }
 
@@ -130,7 +132,7 @@ namespace Vaiona.MultiTenancy.Services
             try
             {
                 tenant.UseFallback = bool.Parse(manifest.Attribute("useFallback").Value);
-                if(tenant.UseFallback && tenant.Id != defaultTenant.Id)
+                if (tenant.UseFallback && tenant.Id != defaultTenant.Id)
                     tenant.Fallback = defaultTenant;
             }
             catch
@@ -138,13 +140,14 @@ namespace Vaiona.MultiTenancy.Services
                 tenant.UseFallback = false;
                 tenant.Fallback = null;
             }
-            
+
             try
             {
                 tenant.ShortName = manifest.Element("ShortName").Value;
-            } catch
+            }
+            catch
             {
-                if(tenant.UseFallback == true && tenant.Fallback != null)
+                if (tenant.UseFallback == true && tenant.Fallback != null)
                     tenant.ShortName = defaultTenant.ShortName;
             }
 
@@ -170,13 +173,13 @@ namespace Vaiona.MultiTenancy.Services
 
             try
             {
-                tenant.Logo = manifest.Element("Logo").Value;                
+                tenant.Logo = manifest.Element("Logo").Value;
             }
             catch
             {
                 if (tenant.UseFallback == true && tenant.Fallback != null)
                 {
-                    tenant.Logo = defaultTenant.Logo;                    
+                    tenant.Logo = defaultTenant.Logo;
                 }
             }
 
@@ -211,7 +214,7 @@ namespace Vaiona.MultiTenancy.Services
             catch
             {
                 if (tenant.UseFallback == true && tenant.Fallback != null)
-                    tenant.Layout = defaultTenant.Layout;                
+                    tenant.Layout = defaultTenant.Layout;
             }
             // take another chance to set the layout
             if (string.IsNullOrWhiteSpace(tenant.Layout))
@@ -238,6 +241,18 @@ namespace Vaiona.MultiTenancy.Services
                 if (tenant.UseFallback == true && tenant.Fallback != null)
                 {
                     tenant.PolicyFileName = defaultTenant.PolicyFileName;
+                }
+            }
+
+            try
+            {
+                tenant.TermsAndConditionsFileName = manifest.Element("TermsAndConditions").Value;
+            }
+            catch
+            {
+                if (tenant.UseFallback == true && tenant.Fallback != null)
+                {
+                    tenant.TermsAndConditionsFileName = defaultTenant.TermsAndConditionsFileName;
                 }
             }
 
@@ -305,7 +320,7 @@ namespace Vaiona.MultiTenancy.Services
             {
                 tenant.AllowedFileExtensions = manifest.Element("AllowedFileExtensions").Value
                     .Split(',').ToList()
-                    .Select(p=> p.Trim()).ToList(); // removes possible leading or tailing white spaces
+                    .Select(p => p.Trim()).ToList(); // removes possible leading or tailing white spaces
             }
             catch
             {
@@ -375,7 +390,7 @@ namespace Vaiona.MultiTenancy.Services
             XElement xTenant = new XElement("Tenant");
             xTenant.Attribute("id").SetValue(tenant.Id);
             xTenant.Attribute("default").SetValue(tenant.IsDefault);
-            xTenant.Attribute("status").SetValue(tenant.Status == TenantStatus.Active? "active": "inactive");
+            xTenant.Attribute("status").SetValue(tenant.Status == TenantStatus.Active ? "active" : "inactive");
 
             XElement manifest = XElement.Load(CatalogFilePath);
             IEnumerable<XElement> xTenants = manifest.Elements("Tenant");
@@ -421,7 +436,7 @@ namespace Vaiona.MultiTenancy.Services
                 {
                     xTenantToBeUnset.SetAttributeValue("default", false);
                 }
-                XElement xTenant =manifest.Elements("Tenant")
+                XElement xTenant = manifest.Elements("Tenant")
                    .Where(p => tenant.Id.Equals(p.Attribute("id").Value, StringComparison.InvariantCultureIgnoreCase))
                    .Single();
                 // set the chosen one to default
